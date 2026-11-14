@@ -101,3 +101,11 @@ def test_unreadable_file_never_starts(tmp_path: Path) -> None:
         assert not player.has_started
 
     run(scenario)
+
+
+def test_banner_removal_is_accepted_by_mpv(video: Path) -> None:
+    async def scenario(player: MpvPlayer) -> None:
+        await player.show_banner(message_banner("hello"), None)
+        await player._overlay(None)  # raises MpvError if mpv rejects the removal
+
+    run(scenario)

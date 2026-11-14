@@ -165,13 +165,15 @@ class MpvPlayer:
 
     async def _clear_banner_after(self, seconds: float) -> None:
         await asyncio.sleep(seconds)
-        with contextlib.suppress(MpvError, ConnectionError, TimeoutError):
+        try:
             await self._overlay(None)
+        except (MpvError, ConnectionError, TimeoutError) as e:
+            logger.warning("could not remove the banner: %s", e)
 
     async def _overlay(self, ass: str | None) -> None:
         overlay: dict[str, Any] = {"name": "osd-overlay", "id": _BANNER_OVERLAY_ID}
         if ass is None:
-            overlay["format"] = "none"
+            overlay |= {"format": "none", "data": ""}  # mpv rejects a removal without data
         else:
             overlay |= {"format": "ass-events", "data": ass, "res_x": WIDTH, "res_y": HEIGHT}
         await self._command(overlay)
