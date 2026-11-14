@@ -39,7 +39,8 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
 
 - La logique pure (`tuner`, `state`, `library`, `config`) ne dépend ni de mpv, ni des entrées, ni de
   l'horloge : **l'heure est passée en paramètre**.
-- En dev sur PC : mpv fenêtré, zapping au clavier via les raccourcis mpv (`script-message` vers l'app).
+- Option `input` de la config : `"keyboard"` (dev sur PC : mpv fenêtré, touches transmises par mpv
+  via `script-message`) ou `"remote"` (Pi : télécommande CEC/USB lue avec `evdev`).
 
 ## Stack
 

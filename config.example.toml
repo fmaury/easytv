@@ -5,6 +5,11 @@
 # Préfixer les dossiers par "01 - ", "02 - "… pour fixer l'ordre des chaînes.
 channels_dir = "/media/tv"
 
+# Comment on zappe :
+#   "keyboard" : au clavier, dans la fenêtre mpv (développement sur PC)
+#   "remote"   : télécommande de la TV (HDMI-CEC) ou télécommande USB (sur la Pi)
+input = "remote"
+
 # Fichier où EasyTV mémorise la dernière chaîne et la position de chaque chaîne.
 state_file = "/var/lib/easytv/state.json"
 

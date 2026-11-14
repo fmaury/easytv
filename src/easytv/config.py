@@ -1,5 +1,6 @@
 import tomllib
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +11,11 @@ class ConfigError(Exception):
     pass
 
 
+class InputMode(StrEnum):
+    KEYBOARD = "keyboard"  # keys pressed in the mpv window (development on a PC)
+    REMOTE = "remote"  # input devices read with evdev: TV remote via CEC, USB remote (Pi)
+
+
 @dataclass(frozen=True)
 class Config:
     channels_dir: Path
@@ -18,6 +24,7 @@ class Config:
     save_interval: float = 5
     rescan_interval: float = 30
     video_extensions: frozenset[str] = DEFAULT_VIDEO_EXTENSIONS
+    input: InputMode = InputMode.REMOTE
 
 
 def load_config(path: Path) -> Config:
@@ -37,6 +44,7 @@ def load_config(path: Path) -> Config:
         save_interval=_seconds(data, "save_interval", defaults.save_interval),
         rescan_interval=_seconds(data, "rescan_interval", defaults.rescan_interval),
         video_extensions=_extensions(data, defaults.video_extensions),
+        input=_input_mode(data, defaults.input),
     )
 
 
@@ -64,3 +72,12 @@ def _extensions(data: dict[str, Any], default: frozenset[str]) -> frozenset[str]
     if not isinstance(value, list) or not all(isinstance(v, str) and v for v in value):
         raise ConfigError("video_extensions must be a list of strings")
     return frozenset(v.lower() if v.startswith(".") else f".{v.lower()}" for v in value)
+
+
+def _input_mode(data: dict[str, Any], default: InputMode) -> InputMode:
+    value = data.get("input", default)
+    try:
+        return InputMode(value)
+    except ValueError as e:
+        choices = ", ".join(f'"{m}"' for m in InputMode)
+        raise ConfigError(f"input must be one of {choices}") from e

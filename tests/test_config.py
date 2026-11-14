@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from easytv.config import DEFAULT_VIDEO_EXTENSIONS, ConfigError, load_config
+from easytv.config import DEFAULT_VIDEO_EXTENSIONS, ConfigError, InputMode, load_config
 
 
 def write(tmp_path: Path, content: str) -> Path:
@@ -21,6 +21,7 @@ def test_full_config(tmp_path: Path) -> None:
         save_interval = 2.5
         rescan_interval = 60
         video_extensions = [".MP4", "mkv"]
+        input = "keyboard"
         """,
     )
     config = load_config(path)
@@ -30,6 +31,7 @@ def test_full_config(tmp_path: Path) -> None:
     assert config.save_interval == 2.5
     assert config.rescan_interval == 60
     assert config.video_extensions == {".mp4", ".mkv"}
+    assert config.input is InputMode.KEYBOARD
 
 
 def test_defaults(tmp_path: Path) -> None:
@@ -39,6 +41,7 @@ def test_defaults(tmp_path: Path) -> None:
     assert config.save_interval == 5
     assert config.rescan_interval == 30
     assert config.video_extensions == DEFAULT_VIDEO_EXTENSIONS
+    assert config.input is InputMode.REMOTE
 
 
 def test_home_is_expanded(tmp_path: Path) -> None:
@@ -78,3 +81,15 @@ def test_invalid_extensions(tmp_path: Path) -> None:
     )
     with pytest.raises(ConfigError, match="video_extensions"):
         load_config(path)
+
+
+@pytest.mark.parametrize("value", ['"telecommande"', "1"])
+def test_invalid_input_mode(tmp_path: Path, value: str) -> None:
+    path = write(tmp_path, f'channels_dir = "/tv"\nstate_file = "/s.json"\ninput = {value}\n')
+    with pytest.raises(ConfigError, match='input must be one of "keyboard", "remote"'):
+        load_config(path)
+
+
+def test_example_config_is_valid() -> None:
+    config = load_config(Path(__file__).parent.parent / "config.example.toml")
+    assert config.input is InputMode.REMOTE
