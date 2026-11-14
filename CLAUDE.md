@@ -36,12 +36,17 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
 | `tuner.py` | Zapping, vidéo suivante, rebouclage, règle de reprise, contenu disparu | **oui, cœur testé** |
 | `banner.py` | Bandeau façon TV en ASS (numéro, nom sans préfixe, titre) et messages | oui |
 | `player.py` | Pilote mpv via sa socket JSON IPC : charger, aller à, bandeau (`osd-overlay`), événements | non |
-| `remote.py` | Lit les touches via `evdev` (CEC, télécommande USB, clavier) → actions | non |
+| `remote.py` | Commandes (`Action`, `Command`) ↔ `script-message` mpv ; à venir : touches `evdev` | oui |
+| `web.py` + `web.html` | Télécommande web pour téléphone : serveur HTTP `asyncio` (stdlib), `/api/status`, `/api/command` | non |
 | `app.py` | Boucle principale : relie remote → tuner → player, sauvegarde et rescan périodiques | non |
 | `__main__.py` | Point d'entrée `easytv` | non |
 
 - La logique pure (`tuner`, `state`, `library`, `config`) ne dépend ni de mpv, ni des entrées, ni de
   l'horloge : **l'heure est passée en paramètre**.
+- **Télécommande web** (`web_port`, 8080 par défaut, 0 = désactivée) : les commandes reçues passent
+  par `App.submit` → même file d'événements que le clavier (pas de concurrence avec mpv).
+  `quit` n'est pas proposé ; `POST /api/command` exige `Content-Type: application/json` (bloque
+  les requêtes venant d'autres sites).
 - Option `input` de la config : `"keyboard"` (dev sur PC : mpv fenêtré, touches transmises par mpv
   via `script-message`) ou `"remote"` (Pi : télécommande CEC/USB lue avec `evdev`).
 
@@ -60,8 +65,9 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
 ## Contraintes matérielles
 
 - Un seul port HDMI (taille normale), qui gère le CEC.
-- TV **TCL** : CEC = « T-Link » / « Contrôle HDMI ». Flèches, OK, Retour normalement transmis ;
-  CH+/CH− et chiffres souvent non → zapping principal sur ↑/↓.
+- TV **TCL 50P610** : CEC = « T-Link ». **Aucune touche transmise** à la Pi (voir feuille de route) ;
+  CH+ change d'entrée HDMI. Elle affiche « HDMI1 », jamais le nom OSD.
+  → zapping par la page web, puis infrarouge ou télécommande USB.
   Vérifier les touches reçues : `cec-ctl -d /dev/cec0 --playback -M`.
 - Décodage matériel Pi 3 : **H.264 uniquement** (jusqu'à 1080p). Pas de HEVC matériel :
   HEVC, VP9, AV1 saccadent. Pas de conversion automatique dans l'app : vidéos fournies en H.264.
@@ -138,7 +144,12 @@ avant exécution. Les procédures récurrentes deviennent des skills dans `.clau
 2. Lecteur mpv + clavier → TV fonctionnelle sur PC ✅
 3. Robustesse : vidéos illisibles (anti-boucle), logs, bandeau soigné ✅
 4. Installation sur la Pi : `install.sh`, service systemd, README ✅
-5. Télécommande : evdev + CEC avec la TV TCL + skill `/cec-test` ← **en cours**
-6. Bonus : effet neige, liste des chaînes sur OK, page web de télécommande, Samba
+5. Télécommande : ← **en cours**
+   - page web sur téléphone ✅
+   - CEC : **la TCL 50P610 ne transmet aucune touche** (testé le 2026-11-14 : Pi seule sur le bus,
+     CEC 1.4, identifiant fabricant TCL, type tuner → rien ; la TV demande seulement le nom OSD).
+     Elle sait en revanche basculer sur l'entrée de la Pi (`active-source`).
+   - à venir : récepteur infrarouge GPIO (télécommande TCL RC802N) ou télécommande USB, via `evdev`
+6. Bonus : effet neige, liste des chaînes sur OK, Samba
 
 Mettre à jour la phase en cours à chaque étape terminée.
