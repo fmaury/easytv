@@ -66,12 +66,21 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
 ## Commandes
 
 ```bash
+uv run easytv [--config config.toml] [--fullscreen]   # lancer la TV
 uv sync                      # dépendances
 uv run pytest                # tests
 uv run ruff format .         # mise en forme
 uv run ruff check --fix .    # lint
 uv run mypy                  # typage
 ```
+
+Touches en mode `input = "keyboard"` (définies dans `KEY_BINDINGS`, `player.py`) :
+↑/↓ chaîne suivante/précédente, 1–9 aller à la chaîne, → vidéo suivante, i/Entrée infos,
+f plein écran, q/Échap quitter.
+
+`tests/test_player.py` lance le vrai mpv (`--vo=null`) ; il est ignoré si mpv ou ffmpeg manquent.
+Pour un essai réel piloté par Claude : `input = "remote"` (la fenêtre ignore le clavier) et envoyer
+des `script-message easytv <action>` sur la socket `/tmp/easytv-*/mpv.sock`.
 
 **Une tâche n'est finie que si** `ruff format --check`, `ruff check`, `mypy` et `pytest` passent.
 
@@ -96,8 +105,8 @@ avant exécution. Les procédures récurrentes deviennent des skills dans `.clau
 
 0. Socle : CLAUDE.md, pyproject, outils ✅
 1. Logique pure + tests (config, library, state, tuner) ✅
-2. Lecteur mpv + clavier → TV fonctionnelle sur PC ← **en cours**
-3. Robustesse : sauvegarde périodique, rescan, vidéos illisibles, logs, bandeau
+2. Lecteur mpv + clavier → TV fonctionnelle sur PC ✅
+3. Robustesse : vidéos illisibles (anti-boucle), logs, bandeau soigné ← **en cours**
 4. Installation sur la Pi (OS, mpv DRM, systemd, SFTP) + skills `/pi-setup`, `/deploy-pi`
 5. CEC avec la TV TCL + skill `/cec-test`
 6. Bonus : effet neige, liste des chaînes sur OK, page web de télécommande, Samba
