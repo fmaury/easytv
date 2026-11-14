@@ -72,9 +72,15 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
   Vérifier les touches reçues : `cec-ctl -d /dev/cec0 --playback -M`.
 - Décodage matériel Pi 3 : **H.264 uniquement** (jusqu'à 1080p). Pas de HEVC matériel :
   HEVC, VP9, AV1 saccadent. Pas de conversion automatique dans l'app : vidéos fournies en H.264.
-- **mpv sur la Pi : `--hwdec=v4l2m2m`** (décodeur `bcm2835-codec`, sans copie), `--vo=gpu` en DRM
-  (bureau arrêté). Mesuré le 2026-11-14 sur la Pi 3 B : 720p → 19 % CPU, 1080p 6 Mbit/s → 23 % CPU,
-  0 image perdue. À éviter : `v4l2m2m-copy` (images perdues), décodage logiciel (82 % CPU en 720p) ;
+- **mpv sur la Pi : `--hwdec=v4l2m2m-copy`** (décodeur `bcm2835-codec`, image recopiée), `--vo=gpu`
+  en DRM. **Ne pas utiliser `v4l2m2m` sans copie : écran noir.** mpv 0.40 n'a pas d'interop dmabuf
+  sur la Pi 3 (« drmprime hwdec requires at least one dmabuf interop backend ») et se rabat sur un
+  plan overlay DRM que vc4 refuse (« Failed to commit atomic request », errno 22) : image décodée,
+  jamais affichée, alors que CPU, fps et images perdues semblent parfaits. Toujours vérifier
+  l'absence de ce message (`request_log_messages` sur la socket) ou l'écran réel.
+  Mesuré le 2026-11-14 sur un H.264 640×480 : `v4l2m2m-copy` 38 % CPU, 0 image perdue, image OK ;
+  logiciel 59 %. 720p/1080p en `-copy` : à mesurer.
+  `--vo=gpu-next` impossible (libplacebo exige OpenGL 3, la Pi 3 n'a que GLES 2).
   `--hwdec=auto` ne choisit pas v4l2m2m.
 - USB 2.0 uniquement ; système sur carte SD (le démarrage USB du 3 B demande une activation préalable).
 - 1 Go de RAM, pas d'horloge matérielle (heure fausse au boot tant que NTP n'a pas synchronisé).
@@ -126,7 +132,7 @@ des `script-message easytv <action>` sur la socket `/tmp/easytv-*/mpv.sock`.
 - `deploy/easytv.service` : modèle (`@USER@`, `@DIR@`), `Restart=always`, `StateDirectory=easytv`,
   attente NTP (60 s max) avant le lancement.
   systemd arrête le service par SIGTERM : géré comme Ctrl+C (sauvegarde finale de la position).
-- `config.example.toml` est le modèle **Pi** : `mpv_args` (`--gpu-context=drm`, `--hwdec=v4l2m2m`,
+- `config.example.toml` est le modèle **Pi** : `mpv_args` (`--gpu-context=drm`, `--hwdec=v4l2m2m-copy`,
   `--ao=alsa` + périphérique HDMI : le service tourne hors session, sans PipeWire), `save_interval = 30`.
 - Relancer EasyTV sans sudo : envoyer `script-message easytv quit` sur la socket
   `/tmp/easytv-*/mpv.sock` → systemd le relance (le code est installé en mode éditable : un

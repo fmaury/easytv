@@ -36,7 +36,8 @@ rescan_interval = 30
 # Options passées à mpv, propres à la machine.
 mpv_args = [
     "--gpu-context=drm",                             # affichage direct sur la TV, sans bureau
-    "--hwdec=v4l2m2m",                               # décodage H.264 matériel de la Pi
+    "--hwdec=v4l2m2m-copy",                          # décodage H.264 matériel de la Pi
+                                                     # (sans « -copy » : écran noir sur Pi 3)
     "--ao=alsa",                                     # son sans PipeWire (service système)
     "--audio-device=alsa/hdmi:CARD=vc4hdmi,DEV=0",   # son par le HDMI de la TV
 ]
