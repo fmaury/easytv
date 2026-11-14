@@ -24,6 +24,10 @@ class Tuner:
         self._index: int | None = None
 
     @property
+    def channels(self) -> list[Channel]:
+        return list(self._channels)
+
+    @property
     def current(self) -> Channel | None:
         return None if self._index is None else self._channels[self._index]
 
