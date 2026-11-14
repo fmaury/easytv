@@ -1,4 +1,7 @@
 import asyncio
+import json
+import os
+import signal
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +26,7 @@ class ClosingPlayer:
 
     def __init__(self, **_: Any) -> None:
         self.events: asyncio.Queue[PlayerEvent] = asyncio.Queue()
-        self.position = None
+        self.position: float | None = None
         self.has_started = False
 
     async def start(self) -> None:
@@ -54,3 +57,23 @@ def test_exit_code_1_when_player_closes_by_itself(
     with pytest.raises(SystemExit) as exit_info:
         main()
     assert exit_info.value.code == 1
+
+
+class TerminatedPlayer(ClosingPlayer):
+    """A player playing at 42 s when systemd sends SIGTERM."""
+
+    async def start(self) -> None:
+        self.position = 42.0
+        asyncio.get_running_loop().call_later(0.2, os.kill, os.getpid(), signal.SIGTERM)
+
+
+def test_sigterm_saves_the_position(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    (tmp_path / "tv" / "news").mkdir(parents=True)
+    (tmp_path / "tv" / "news" / "a.mp4").touch()
+    config = tmp_path / "config.toml"
+    config.write_text(f'channels_dir = "{tmp_path}/tv"\nstate_file = "{tmp_path}/s.json"\n')
+    monkeypatch.setattr("easytv.__main__.MpvPlayer", TerminatedPlayer)
+    monkeypatch.setattr("sys.argv", ["easytv", "--config", str(config)])
+    main()  # returns normally: no exit code, no crash
+    state = json.loads((tmp_path / "s.json").read_text())
+    assert state["channels"]["news"]["position"] == 42.0

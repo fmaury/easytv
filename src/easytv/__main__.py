@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import logging
+import signal
 import sys
 from pathlib import Path
 
@@ -31,7 +32,7 @@ def main() -> None:
     logger.info("EasyTV starting with %s", args.config)
     try:
         reason = asyncio.run(_run(config, fullscreen=args.fullscreen))
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, asyncio.CancelledError):
         logger.info("stopped")
         return
     except MpvError as e:
@@ -43,6 +44,11 @@ def main() -> None:
 
 
 async def _run(config: Config, *, fullscreen: bool) -> StopReason:
+    # systemd stops the service with SIGTERM: stop like Ctrl+C, so the final state save runs.
+    main_task = asyncio.current_task()
+    assert main_task is not None
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, main_task.cancel)
+
     if config.input is InputMode.REMOTE:
         logger.warning("remote control is not available yet: zapping is disabled")
     player = MpvPlayer(
