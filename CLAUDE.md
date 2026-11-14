@@ -115,6 +115,7 @@ des `script-message easytv <action>` sur la socket `/tmp/easytv-*/mpv.sock`.
   service systemd, démarrage sans bureau (`multi-user.target`).
 - `deploy/easytv.service` : modèle (`@USER@`, `@DIR@`), `Restart=always`, `StateDirectory=easytv`,
   attente NTP (60 s max) avant le lancement.
+  systemd arrête le service par SIGTERM : géré comme Ctrl+C (sauvegarde finale de la position).
 - `config.example.toml` est le modèle **Pi** : `mpv_args` (`--gpu-context=drm`, `--hwdec=v4l2m2m`,
   `--ao=alsa` + périphérique HDMI : le service tourne hors session, sans PipeWire), `save_interval = 30`.
 - Relancer EasyTV sans sudo : envoyer `script-message easytv quit` sur la socket
