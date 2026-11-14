@@ -1,0 +1,51 @@
+[project]
+name = "easytv"
+version = "0.1.0"
+description = "Raspberry Pi TV: folders are channels, each channel resumes where you left it"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+pi = ["evdev>=1.7"]
+
+[project.scripts]
+easytv = "easytv.__main__:main"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.8", "mypy>=1.13"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E", "W",  # pycodestyle
+    "F",       # pyflakes
+    "I",       # isort
+    "N",       # pep8-naming
+    "UP",      # pyupgrade
+    "B",       # bugbear
+    "SIM",     # simplify
+    "PTH",     # use pathlib
+    "RUF",     # ruff-specific
+    "BLE",     # no blind except
+    "T20",     # no print
+    "LOG",     # logging misuse
+]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["evdev.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
