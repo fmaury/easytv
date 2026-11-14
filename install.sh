@@ -24,7 +24,8 @@ case "$(uname -m)" in
     aarch64 | armv7l) info "Machine : $(tr -d '\0' </proc/device-tree/model 2>/dev/null || uname -m)" ;;
     *) info "Attention : ce n'est pas une Raspberry Pi ($(uname -m)), on continue quand même." ;;
 esac
-sudo -v
+# Ask for the password once if needed (`sudo -v` would ask even with NOPASSWD rules).
+sudo true
 
 # --- 2. Paquets système -----------------------------------------------------
 step "Installation des paquets (mpv, git, curl, v4l-utils)"
