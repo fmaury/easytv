@@ -62,9 +62,12 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
 - TV **TCL** : CEC = « T-Link » / « Contrôle HDMI ». Flèches, OK, Retour normalement transmis ;
   CH+/CH− et chiffres souvent non → zapping principal sur ↑/↓.
   Vérifier les touches reçues : `cec-ctl -d /dev/cec0 --playback -M`.
-- Décodage matériel Pi 3 : **H.264 uniquement** (1080p max, 720p conseillé). Pas de HEVC matériel :
-  HEVC, VP9, AV1 saccadent. Pas de conversion automatique dans l'app : les vidéos sont fournies
-  en H.264. Performances de lecture à valider tôt sur la vraie Pi.
+- Décodage matériel Pi 3 : **H.264 uniquement** (jusqu'à 1080p). Pas de HEVC matériel :
+  HEVC, VP9, AV1 saccadent. Pas de conversion automatique dans l'app : vidéos fournies en H.264.
+- **mpv sur la Pi : `--hwdec=v4l2m2m`** (décodeur `bcm2835-codec`, sans copie), `--vo=gpu` en DRM
+  (bureau arrêté). Mesuré le 2026-11-14 sur la Pi 3 B : 720p → 19 % CPU, 1080p 6 Mbit/s → 23 % CPU,
+  0 image perdue. À éviter : `v4l2m2m-copy` (images perdues), décodage logiciel (82 % CPU en 720p) ;
+  `--hwdec=auto` ne choisit pas v4l2m2m.
 - USB 2.0 uniquement ; système sur carte SD (le démarrage USB du 3 B demande une activation préalable).
 - 1 Go de RAM, pas d'horloge matérielle (heure fausse au boot tant que NTP n'a pas synchronisé).
 
