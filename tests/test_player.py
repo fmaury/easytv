@@ -6,7 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from easytv.player import EndOfFile, Message, MpvPlayer, PlayerEvent
+from easytv.banner import channel_banner, message_banner
+from easytv.player import EndOfFile, Message, MpvPlayer, PlayerEvent, VideoError
 
 pytestmark = pytest.mark.skipif(
     shutil.which("mpv") is None or shutil.which("ffmpeg") is None,
@@ -72,7 +73,31 @@ def test_script_messages_are_forwarded(video: Path) -> None:
     async def scenario(player: MpvPlayer) -> None:
         await player.send_message("easytv", "goto", "2")
         assert await next_event(player) == Message(("easytv", "goto", "2"))
-        await player.show_text("hello", 1)
+        await player.show_banner(channel_banner(1, "01 - Test", "a.mp4"), 0.1)
+        await player.show_banner(message_banner("Aucune chaîne"), None)
         await player.stop()
+
+    run(scenario)
+
+
+def test_has_started_once_the_video_really_plays(video: Path) -> None:
+    async def scenario(player: MpvPlayer) -> None:
+        await player.play(video, start=0)
+        assert not player.has_started
+        await wait_position(player, 1.0)
+        assert player.has_started
+
+    run(scenario)
+
+
+def test_unreadable_file_never_starts(tmp_path: Path) -> None:
+    fake = tmp_path / "fake.mp4"
+    fake.write_text("this is not a video", encoding="utf-8")
+
+    async def scenario(player: MpvPlayer) -> None:
+        await player.play(fake, start=0)
+        event = await next_event(player)
+        assert isinstance(event, VideoError | EndOfFile)
+        assert not player.has_started
 
     run(scenario)

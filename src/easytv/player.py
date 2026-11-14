@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
+from easytv.banner import HEIGHT, WIDTH
+
 logger = logging.getLogger(__name__)
 
 # Keyboard mode: keys pressed in the mpv window are forwarded to the app as script messages.
@@ -26,6 +28,8 @@ KEY_BINDINGS = "".join(
 )
 
 _TIME_POS_ID = 1
+_BANNER_OVERLAY_ID = 1
+_STARTED_AFTER = 0.5  # seconds actually played before a video counts as readable
 _CONNECT_TIMEOUT = 5.0
 _COMMAND_TIMEOUT = 5.0
 
@@ -59,9 +63,12 @@ class Player(Protocol):
     @property
     def position(self) -> float | None: ...
 
+    @property
+    def has_started(self) -> bool: ...
+
     async def play(self, path: Path, start: float) -> None: ...
 
-    async def show_text(self, text: str, seconds: float) -> None: ...
+    async def show_banner(self, ass: str, seconds: float | None) -> None: ...
 
     async def stop(self) -> None: ...
 
@@ -88,11 +95,19 @@ class MpvPlayer:
         self._next_id = 1
         self._position: float | None = None
         self._loading = False
+        self._played_from: float | None = None
+        self._has_started = False
         self._entry_id: int | None = None
+        self._banner_timer: asyncio.Task[None] | None = None
 
     @property
     def position(self) -> float | None:
         return self._position
+
+    @property
+    def has_started(self) -> bool:
+        """Whether the current video has really played, i.e. is readable."""
+        return self._has_started
 
     async def start(self) -> None:
         self._tmp = tempfile.TemporaryDirectory(prefix="easytv-")
@@ -130,6 +145,8 @@ class MpvPlayer:
     async def play(self, path: Path, start: float) -> None:
         self._position = None
         self._loading = True
+        self._played_from = None
+        self._has_started = False
         # The `start` option applies to the next loaded file; setting it first works on every
         # mpv version, unlike loadfile's per-file options whose syntax changed in mpv 0.38.
         await self._command("set_property", "start", f"{start:.3f}")
@@ -137,8 +154,27 @@ class MpvPlayer:
         entry = reply.get("playlist_entry_id") if isinstance(reply, dict) else None
         self._entry_id = entry if isinstance(entry, int) else None
 
-    async def show_text(self, text: str, seconds: float) -> None:
-        await self._command("show-text", text, int(seconds * 1000))
+    async def show_banner(self, ass: str, seconds: float | None) -> None:
+        """Display ASS text over the video, removed after `seconds` (None: kept)."""
+        if self._banner_timer is not None:
+            self._banner_timer.cancel()
+            self._banner_timer = None
+        await self._overlay(ass)
+        if seconds is not None:
+            self._banner_timer = asyncio.create_task(self._clear_banner_after(seconds))
+
+    async def _clear_banner_after(self, seconds: float) -> None:
+        await asyncio.sleep(seconds)
+        with contextlib.suppress(MpvError, ConnectionError, TimeoutError):
+            await self._overlay(None)
+
+    async def _overlay(self, ass: str | None) -> None:
+        overlay: dict[str, Any] = {"name": "osd-overlay", "id": _BANNER_OVERLAY_ID}
+        if ass is None:
+            overlay["format"] = "none"
+        else:
+            overlay |= {"format": "ass-events", "data": ass, "res_x": WIDTH, "res_y": HEIGHT}
+        await self._command(overlay)
 
     async def stop(self) -> None:
         self._position = None
@@ -148,6 +184,8 @@ class MpvPlayer:
         await self._command("script-message", *args)
 
     async def close(self) -> None:
+        if self._banner_timer is not None:
+            self._banner_timer.cancel()
         if self._proc is not None and self._proc.returncode is None:
             with contextlib.suppress(MpvError, ConnectionError, TimeoutError):
                 await self._command("quit")
@@ -181,13 +219,15 @@ class MpvPlayer:
                 await asyncio.sleep(0.05)
 
     async def _command(self, *args: Any) -> Any:
+        """Send a command: positional arguments, or a single dict of named arguments."""
         if self._writer is None:
             raise MpvError("mpv is not running")
         request_id = self._next_id
         self._next_id += 1
         future: asyncio.Future[Any] = asyncio.get_running_loop().create_future()
         self._pending[request_id] = future
-        payload = {"command": list(args), "request_id": request_id}
+        command = args[0] if len(args) == 1 and isinstance(args[0], dict) else list(args)
+        payload = {"command": command, "request_id": request_id}
         self._writer.write(json.dumps(payload).encode() + b"\n")
         try:
             await self._writer.drain()
@@ -230,13 +270,22 @@ class MpvPlayer:
                 data = message.get("data")
                 # Ignore the previous file's last updates while the new one is loading.
                 if not self._loading:
-                    self._position = float(data) if isinstance(data, int | float) else None
+                    self._on_time_pos(data)
             case "playback-restart":
                 self._loading = False
             case "end-file":
                 self._on_end_file(message)
             case "client-message":
                 self.events.put_nowait(Message(tuple(str(a) for a in message.get("args", []))))
+
+    def _on_time_pos(self, data: Any) -> None:
+        self._position = float(data) if isinstance(data, int | float) else None
+        if self._position is None or self._has_started:
+            return
+        if self._played_from is None:
+            self._played_from = self._position
+        elif self._position - self._played_from >= _STARTED_AFTER:
+            self._has_started = True
 
     def _on_end_file(self, message: dict[str, Any]) -> None:
         entry = message.get("playlist_entry_id")
