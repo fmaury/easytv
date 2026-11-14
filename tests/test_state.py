@@ -13,6 +13,8 @@ def test_round_trip(tmp_path: Path) -> None:
             "01 - Dessins animés": ChannelState("ep02.mp4", 754.3, 1_763_150_000.0),
             "02 - Docs": ChannelState("doc05.mp4", 128.0, 1_763_155_400.0),
         },
+        volume=35,
+        muted=True,
     )
     save_state(path, state)
     assert load_state(path) == state
@@ -33,6 +35,10 @@ def test_missing_file_gives_empty_state(tmp_path: Path) -> None:
         '{"version": 1, "current_channel": null, "channels": {"a": {"video": "x"}}}',
         '{"version": 1, "current_channel": null, "channels": {"a": {"video": "x", '
         '"position": "oops", "left_at": 0}}}',
+        '{"version": 1, "current_channel": null, "channels": {}, "volume": 150}',
+        '{"version": 1, "current_channel": null, "channels": {}, "volume": "loud"}',
+        '{"version": 1, "current_channel": null, "channels": {}, "volume": true}',
+        '{"version": 1, "current_channel": null, "channels": {}, "muted": "yes"}',
     ],
 )
 def test_corrupted_file_gives_empty_state(
@@ -55,3 +61,9 @@ def test_save_overwrites_previous_state(tmp_path: Path) -> None:
     save_state(path, TvState(current_channel="a"))
     save_state(path, TvState(current_channel="b"))
     assert load_state(path).current_channel == "b"
+
+
+def test_state_without_volume_is_still_readable(tmp_path: Path) -> None:
+    path = tmp_path / "state.json"
+    path.write_text('{"version": 1, "current_channel": "a", "channels": {}}', encoding="utf-8")
+    assert load_state(path) == TvState(current_channel="a", volume=100, muted=False)

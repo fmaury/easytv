@@ -8,6 +8,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 STATE_VERSION = 1
+MAX_VOLUME = 100
 
 
 @dataclass
@@ -21,6 +22,8 @@ class ChannelState:
 class TvState:
     current_channel: str | None = None
     channels: dict[str, ChannelState] = field(default_factory=dict)
+    volume: int = MAX_VOLUME  # 0-100, mpv's volume
+    muted: bool = False
 
 
 def load_state(path: Path) -> TvState:
@@ -61,4 +64,11 @@ def _parse(data: Any) -> TvState:
         )
         for name, entry in data["channels"].items()
     }
-    return TvState(current_channel=current, channels=channels)
+    # Optional: state files written before volume control have no volume.
+    volume = data.get("volume", MAX_VOLUME)
+    if isinstance(volume, bool) or not isinstance(volume, int) or not 0 <= volume <= MAX_VOLUME:
+        raise ValueError(f"invalid volume: {volume!r}")
+    muted = data.get("muted", False)
+    if not isinstance(muted, bool):
+        raise TypeError("muted must be a boolean")
+    return TvState(current_channel=current, channels=channels, volume=volume, muted=muted)

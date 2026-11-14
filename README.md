@@ -142,6 +142,8 @@ La page affiche la chaîne en cours et permet de :
 
 - passer à la **chaîne suivante ou précédente** ;
 - aller **directement à une chaîne** en la touchant dans la liste ;
+- **monter, baisser ou couper le son** (une jauge s'affiche en haut à droite de la TV ; le volume
+  est retenu, même après un redémarrage) ;
 - passer à la **vidéo suivante** ;
 - réafficher le **bandeau d'infos** sur la TV.
 

@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from easytv.__main__ import main
-from easytv.player import Closed, PlayerEvent
+from easytv.player import Closed, Layer, PlayerEvent
 
 
 def test_invalid_config_exits_with_clear_error(
@@ -38,7 +38,12 @@ class ClosingPlayer:
     async def play(self, path: Path, start: float) -> None:
         pass
 
-    async def show_banner(self, ass: str, seconds: float | None) -> None:
+    async def show_banner(
+        self, ass: str, seconds: float | None, layer: Layer = Layer.BANNER
+    ) -> None:
+        pass
+
+    async def set_volume(self, volume: int, muted: bool) -> None:
         pass
 
     async def stop(self) -> None:
@@ -51,6 +56,7 @@ def test_exit_code_1_when_player_closes_by_itself(
     config = tmp_path / "config.toml"
     config.write_text(
         f'channels_dir = "{tmp_path}"\nstate_file = "{tmp_path}/s.json"\ninput = "keyboard"\n'
+        "web_port = 0\n"
     )
     monkeypatch.setattr("easytv.__main__.MpvPlayer", ClosingPlayer)
     monkeypatch.setattr("sys.argv", ["easytv", "--config", str(config)])
@@ -71,7 +77,9 @@ def test_sigterm_saves_the_position(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     (tmp_path / "tv" / "news").mkdir(parents=True)
     (tmp_path / "tv" / "news" / "a.mp4").touch()
     config = tmp_path / "config.toml"
-    config.write_text(f'channels_dir = "{tmp_path}/tv"\nstate_file = "{tmp_path}/s.json"\n')
+    config.write_text(
+        f'channels_dir = "{tmp_path}/tv"\nstate_file = "{tmp_path}/s.json"\nweb_port = 0\n'
+    )
     monkeypatch.setattr("easytv.__main__.MpvPlayer", TerminatedPlayer)
     monkeypatch.setattr("sys.argv", ["easytv", "--config", str(config)])
     main()  # returns normally: no exit code, no crash

@@ -14,6 +14,9 @@ class Action(StrEnum):
     GOTO = "goto"
     NEXT_VIDEO = "next_video"
     INFO = "info"
+    VOLUME_UP = "volume_up"
+    VOLUME_DOWN = "volume_down"
+    MUTE = "mute"
     QUIT = "quit"
 
 

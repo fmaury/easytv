@@ -41,6 +41,26 @@ def channel_banner(number: int, channel: str, video: str) -> str:
     return f"{_BAR}\n{text}"
 
 
+def volume_banner(volume: int, muted: bool) -> str:
+    """A TV-style volume gauge in the top right corner."""
+    x, y, width, height = 1400, 110, 420, 24
+    filled = 0 if muted else round(width * volume / 100)
+    label = "Son coupé" if muted else f"Volume  {volume}"
+    parts = [
+        rf"{{\an7\pos({x - 30},30)\bord0\shad0\1c&H000000&\1a&H50&\p1}}"
+        rf"m 0 0 l {width + 60} 0 {width + 60} 134 0 134{{\p0}}",
+        rf"{{\an7\pos({x},42)\fs50\b1\bord3\shad0\1c&HFFFFFF&\3c&H000000&}}{label}",
+        rf"{{\an7\pos({x},{y})\bord0\shad0\1c&H606060&\p1}}"
+        rf"m 0 0 l {width} 0 {width} {height} 0 {height}{{\p0}}",
+    ]
+    if filled:
+        parts.append(
+            rf"{{\an7\pos({x},{y})\bord0\shad0\1c&H00D7FF&\p1}}"
+            rf"m 0 0 l {filled} 0 {filled} {height} 0 {height}{{\p0}}"
+        )
+    return "\n".join(parts)
+
+
 def message_banner(text: str) -> str:
     return (
         f"{{\\an5\\pos({WIDTH // 2},{HEIGHT // 2})\\fs90\\b1\\bord4\\shad0"

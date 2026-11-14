@@ -5,6 +5,7 @@ import logging
 import tempfile
 from collections.abc import Sequence
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -19,6 +20,9 @@ KEY_BINDINGS = "".join(
         "DOWN script-message easytv prev_channel\n",
         "RIGHT script-message easytv next_video\n",
         "i script-message easytv info\n",
+        "- script-message easytv volume_down\n",
+        "+ script-message easytv volume_up\n",
+        "m script-message easytv mute\n",
         "ENTER script-message easytv info\n",
         "f cycle fullscreen\n",
         "q script-message easytv quit\n",
@@ -28,7 +32,6 @@ KEY_BINDINGS = "".join(
 )
 
 _TIME_POS_ID = 1
-_BANNER_OVERLAY_ID = 1
 _STARTED_AFTER = 0.5  # seconds actually played before a video counts as readable
 _CONNECT_TIMEOUT = 5.0
 _COMMAND_TIMEOUT = 5.0
@@ -57,6 +60,13 @@ class Closed:
 PlayerEvent = EndOfFile | VideoError | Message | Closed
 
 
+class Layer(Enum):
+    """On-screen layers (mpv overlay ids): the volume gauge never hides the channel banner."""
+
+    BANNER = 1
+    VOLUME = 2
+
+
 class Player(Protocol):
     events: asyncio.Queue[PlayerEvent]
 
@@ -68,7 +78,11 @@ class Player(Protocol):
 
     async def play(self, path: Path, start: float) -> None: ...
 
-    async def show_banner(self, ass: str, seconds: float | None) -> None: ...
+    async def show_banner(
+        self, ass: str, seconds: float | None, layer: Layer = Layer.BANNER
+    ) -> None: ...
+
+    async def set_volume(self, volume: int, muted: bool) -> None: ...
 
     async def stop(self) -> None: ...
 
@@ -98,7 +112,7 @@ class MpvPlayer:
         self._played_from: float | None = None
         self._has_started = False
         self._entry_id: int | None = None
-        self._banner_timer: asyncio.Task[None] | None = None
+        self._banner_timers: dict[Layer, asyncio.Task[None]] = {}
 
     @property
     def position(self) -> float | None:
@@ -154,24 +168,32 @@ class MpvPlayer:
         entry = reply.get("playlist_entry_id") if isinstance(reply, dict) else None
         self._entry_id = entry if isinstance(entry, int) else None
 
-    async def show_banner(self, ass: str, seconds: float | None) -> None:
+    async def show_banner(
+        self, ass: str, seconds: float | None, layer: Layer = Layer.BANNER
+    ) -> None:
         """Display ASS text over the video, removed after `seconds` (None: kept)."""
-        if self._banner_timer is not None:
-            self._banner_timer.cancel()
-            self._banner_timer = None
-        await self._overlay(ass)
+        timer = self._banner_timers.pop(layer, None)
+        if timer is not None:
+            timer.cancel()
+        await self._overlay(ass, layer)
         if seconds is not None:
-            self._banner_timer = asyncio.create_task(self._clear_banner_after(seconds))
+            self._banner_timers[layer] = asyncio.create_task(
+                self._clear_banner_after(seconds, layer)
+            )
 
-    async def _clear_banner_after(self, seconds: float) -> None:
+    async def set_volume(self, volume: int, muted: bool) -> None:
+        await self._command("set_property", "volume", volume)
+        await self._command("set_property", "mute", muted)
+
+    async def _clear_banner_after(self, seconds: float, layer: Layer) -> None:
         await asyncio.sleep(seconds)
         try:
-            await self._overlay(None)
+            await self._overlay(None, layer)
         except (MpvError, ConnectionError, TimeoutError) as e:
             logger.warning("could not remove the banner: %s", e)
 
-    async def _overlay(self, ass: str | None) -> None:
-        overlay: dict[str, Any] = {"name": "osd-overlay", "id": _BANNER_OVERLAY_ID}
+    async def _overlay(self, ass: str | None, layer: Layer = Layer.BANNER) -> None:
+        overlay: dict[str, Any] = {"name": "osd-overlay", "id": layer.value}
         if ass is None:
             overlay |= {"format": "none", "data": ""}  # mpv rejects a removal without data
         else:
@@ -186,8 +208,8 @@ class MpvPlayer:
         await self._command("script-message", *args)
 
     async def close(self) -> None:
-        if self._banner_timer is not None:
-            self._banner_timer.cancel()
+        for timer in self._banner_timers.values():
+            timer.cancel()
         if self._proc is not None and self._proc.returncode is None:
             with contextlib.suppress(MpvError, ConnectionError, TimeoutError):
                 await self._command("quit")

@@ -32,9 +32,9 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
 |---|---|---|
 | `config.py` | Lit `config.toml` → dataclass `Config` | oui |
 | `library.py` | Scanne `channels_dir` → chaînes et vidéos triées | oui (testé avec `tmp_path`) |
-| `state.py` | État (dernière chaîne ; par chaîne : vidéo, position, heure de départ), sauvegarde JSON atomique | oui |
-| `tuner.py` | Zapping, vidéo suivante, rebouclage, règle de reprise, contenu disparu | **oui, cœur testé** |
-| `banner.py` | Bandeau façon TV en ASS (numéro, nom sans préfixe, titre) et messages | oui |
+| `state.py` | État (dernière chaîne ; par chaîne : vidéo, position, heure de départ ; volume, son coupé), sauvegarde JSON atomique | oui |
+| `tuner.py` | Zapping, vidéo suivante, rebouclage, règle de reprise, contenu disparu, volume | **oui, cœur testé** |
+| `banner.py` | Bandeau façon TV en ASS (numéro, nom sans préfixe, titre), jauge de volume, messages | oui |
 | `player.py` | Pilote mpv via sa socket JSON IPC : charger, aller à, bandeau (`osd-overlay`), événements | non |
 | `remote.py` | Commandes (`Action`, `Command`) ↔ `script-message` mpv ; à venir : touches `evdev` | oui |
 | `web.py` + `web.html` | Télécommande web pour téléphone : serveur HTTP `asyncio` (stdlib), `/api/status`, `/api/command` | non |
@@ -94,7 +94,10 @@ Codes de sortie : 0 = quitté (q/Échap, Ctrl+C), 1 = mpv fermé tout seul ou in
 
 Touches en mode `input = "keyboard"` (définies dans `KEY_BINDINGS`, `player.py`) :
 ↑/↓ chaîne suivante/précédente, 1–9 aller à la chaîne, → vidéo suivante, i/Entrée infos,
-f plein écran, q/Échap quitter.
+`-`/`+` volume, m couper le son, f plein écran, q/Échap quitter.
+
+Volume : celui de mpv (0–100, pas de 5), indépendant de celui de la TV ; changer le volume remet le
+son. Jauge et bandeau sont sur deux calques mpv distincts (`Layer`, `player.py`).
 
 `tests/test_player.py` lance le vrai mpv (`--vo=null`) ; il est ignoré si mpv ou ffmpeg manquent.
 Pour un essai réel piloté par Claude : `input = "remote"` (la fenêtre ignore le clavier) et envoyer

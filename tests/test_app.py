@@ -6,9 +6,9 @@ from pathlib import Path
 import pytest
 
 from easytv.app import NO_CHANNEL_TEXT, UNAVAILABLE_TEXT, App, StopReason
-from easytv.banner import message_banner
+from easytv.banner import message_banner, volume_banner
 from easytv.config import Config
-from easytv.player import Closed, EndOfFile, Message, PlayerEvent, VideoError
+from easytv.player import Closed, EndOfFile, Layer, Message, PlayerEvent, VideoError
 from easytv.remote import Action, Command
 from easytv.state import ChannelState, TvState, load_state, save_state
 from easytv.web import Status
@@ -22,6 +22,8 @@ class FakePlayer:
     position: float | None = None
     played: list[tuple[str, float]] = field(default_factory=list)
     banners: list[str] = field(default_factory=list)
+    volume_banners: list[str] = field(default_factory=list)
+    volume: tuple[int, bool] | None = None
     stopped: int = 0
     broken: set[str] = field(default_factory=set)  # file names that will not play
     has_started: bool = False
@@ -31,8 +33,13 @@ class FakePlayer:
         self.position = None
         self.has_started = path.name not in self.broken
 
-    async def show_banner(self, ass: str, seconds: float | None) -> None:
-        self.banners.append(ass)
+    async def show_banner(
+        self, ass: str, seconds: float | None, layer: Layer = Layer.BANNER
+    ) -> None:
+        (self.banners if layer is Layer.BANNER else self.volume_banners).append(ass)
+
+    async def set_volume(self, volume: int, muted: bool) -> None:
+        self.volume = (volume, muted)
 
     async def stop(self) -> None:
         self.stopped += 1
@@ -215,10 +222,10 @@ def test_info_shows_banner(env: Env) -> None:
 
 def test_submitted_command_is_executed_and_status_follows(env: Env) -> None:
     async def scenario(app: App) -> None:
-        assert app.status() == Status(["Cartoons", "Docs"], 1, "ep1", unavailable=False)
+        assert app.status() == Status(["Cartoons", "Docs"], 1, "ep1", False, 100, False)
         app.submit(Command(Action.GOTO, 2))
         await env.send(Message(("easytv", "info")))  # let the app run
-        assert app.status() == Status(["Cartoons", "Docs"], 2, "doc1", unavailable=False)
+        assert app.status() == Status(["Cartoons", "Docs"], 2, "doc1", False, 100, False)
 
     env.run(scenario)
     assert [p for p, _ in env.player.played] == ["1 - Cartoons/ep1.mp4", "2 - Docs/doc1.mp4"]
@@ -228,7 +235,7 @@ def test_status_without_channels(env: Env, tmp_path: Path) -> None:
     env.config = Config(channels_dir=tmp_path / "empty", state_file=tmp_path / "s.json")
 
     async def scenario(app: App) -> None:
-        assert app.status() == Status([], None, None, unavailable=False)
+        assert app.status() == Status([], None, None, False, 100, False)
 
     env.run(scenario)
 
@@ -303,3 +310,41 @@ def test_rescan_retries_broken_channel_when_videos_change(env: Env) -> None:
         "1 - Cartoons/ep2.mp4",
         "1 - Cartoons/ep3.mp4",
     ]
+
+
+# --- Volume -------------------------------------------------------------------
+
+
+def test_volume_changes_show_gauge_and_are_remembered(env: Env) -> None:
+    async def scenario(app: App) -> None:
+        assert env.player.volume == (100, False)  # applied at startup
+        await env.send(Message(("easytv", "volume_down")))
+        await env.send(Message(("easytv", "volume_down")))
+        assert env.player.volume == (90, False)
+        await env.send(Message(("easytv", "mute")))
+        assert env.player.volume == (90, True)
+        assert app.status().muted
+
+    env.run(scenario)
+    assert env.player.volume_banners[-1] == volume_banner(90, muted=True)
+    assert len(env.player.banners) == 1  # the channel banner is left alone
+    assert env.player.played == [("1 - Cartoons/ep1.mp4", 0.0)]  # no zapping
+    state = env.state()
+    assert (state.volume, state.muted) == (90, True)
+
+    env.player = FakePlayer()
+
+    async def after_restart(app: App) -> None:
+        assert env.player.volume == (90, True)
+
+    env.run(after_restart)
+
+
+def test_volume_up_unmutes(env: Env) -> None:
+    async def scenario(app: App) -> None:
+        await env.send(Message(("easytv", "volume_down")))
+        await env.send(Message(("easytv", "mute")))
+        await env.send(Message(("easytv", "volume_up")))
+        assert env.player.volume == (100, False)
+
+    env.run(scenario)

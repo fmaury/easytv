@@ -214,3 +214,19 @@ def test_all_channels_removed_stops_playback() -> None:
     t.start(T0)
     assert t.update_channels([], T0) is None
     assert t.current is None
+
+
+def test_volume_is_clamped_and_unmutes() -> None:
+    t = tuner(TvState(volume=97, muted=True))
+    t.change_volume(+5)
+    assert (t.state.volume, t.state.muted) == (100, False)
+    t.change_volume(-150)
+    assert t.state.volume == 0
+
+
+def test_toggle_mute_keeps_volume() -> None:
+    t = tuner(TvState(volume=40))
+    t.toggle_mute()
+    assert (t.state.volume, t.state.muted) == (40, True)
+    t.toggle_mute()
+    assert (t.state.volume, t.state.muted) == (40, False)

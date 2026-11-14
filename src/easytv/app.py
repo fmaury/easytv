@@ -4,10 +4,16 @@ import time
 from collections.abc import Awaitable, Callable
 from enum import Enum
 
-from easytv.banner import channel_banner, display_name, message_banner, video_title
+from easytv.banner import (
+    channel_banner,
+    display_name,
+    message_banner,
+    video_title,
+    volume_banner,
+)
 from easytv.config import Config
 from easytv.library import Channel, scan
-from easytv.player import Closed, EndOfFile, Message, Player, PlayerEvent, VideoError
+from easytv.player import Closed, EndOfFile, Layer, Message, Player, PlayerEvent, VideoError
 from easytv.remote import Action, Command, parse_message
 from easytv.state import load_state, save_state
 from easytv.tuner import Playback, Tuner
@@ -16,6 +22,8 @@ from easytv.web import Status
 logger = logging.getLogger(__name__)
 
 BANNER_SECONDS = 4.0
+VOLUME_SECONDS = 2.5
+VOLUME_STEP = 5
 NO_CHANNEL_TEXT = "Aucune chaîne"
 UNAVAILABLE_TEXT = "Chaîne indisponible"
 
@@ -40,6 +48,7 @@ class App:
         logger.info(
             "%d channel(s) found in %s", len(self._tuner.channels), self._config.channels_dir
         )
+        await self._apply_volume()
         await self._show(self._tuner.start(self._clock()))
         timers = [
             asyncio.create_task(self._every(self._config.save_interval, self.save)),
@@ -64,13 +73,14 @@ class App:
     def status(self) -> Status:
         channels = self._tuner.channels
         current = self._tuner.current
-        if current is None:
-            return Status([display_name(c.name) for c in channels], None, None, unavailable=False)
+        state = self._tuner.state
         return Status(
             channels=[display_name(c.name) for c in channels],
-            current=channels.index(current) + 1,
-            video=video_title(self._tuner.state.channels[current.name].video),
+            current=None if current is None else channels.index(current) + 1,
+            video=None if current is None else video_title(state.channels[current.name].video),
             unavailable=self._unavailable is not None,
+            volume=state.volume,
+            muted=state.muted,
         )
 
     async def save(self) -> None:
@@ -128,6 +138,21 @@ class App:
         if command.action is Action.INFO:
             await self._banner()
             return None
+        if command.action in (Action.VOLUME_UP, Action.VOLUME_DOWN, Action.MUTE):
+            if command.action is Action.MUTE:
+                self._tuner.toggle_mute()
+            else:
+                step = VOLUME_STEP if command.action is Action.VOLUME_UP else -VOLUME_STEP
+                self._tuner.change_volume(step)
+            logger.info(
+                "volume %d%s", self._tuner.state.volume, " (muted)" * self._tuner.state.muted
+            )
+            await self._apply_volume()
+            state = self._tuner.state
+            await self._player.show_banner(
+                volume_banner(state.volume, state.muted), VOLUME_SECONDS, Layer.VOLUME
+            )
+            return None
 
         position = self._player.position
         now = self._clock()
@@ -144,10 +169,15 @@ class App:
                 playback = self._tuner.goto(command.number, now)
             case Action.NEXT_VIDEO:
                 playback = self._tuner.next_video(now)
+            case _:
+                return None
         if playback is not None:
             await self._show(playback, reset=command.action is not Action.NEXT_VIDEO)
             await self.save()
         return None
+
+    async def _apply_volume(self) -> None:
+        await self._player.set_volume(self._tuner.state.volume, self._tuner.state.muted)
 
     async def _on_failure(self) -> None:
         """Skip an unreadable video, without looping forever on a fully broken channel."""

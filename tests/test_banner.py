@@ -6,6 +6,7 @@ from easytv.banner import (
     escape_ass,
     message_banner,
     video_title,
+    volume_banner,
 )
 
 
@@ -50,3 +51,18 @@ def test_message_banner_is_centered() -> None:
     ass = message_banner("Aucune chaîne")
     assert ass.startswith("{\\an5")
     assert ass.endswith("Aucune chaîne")
+
+
+def test_volume_banner_gauge_width() -> None:
+    full = volume_banner(100, muted=False)
+    assert "Volume  100" in full
+    assert "m 0 0 l 420 0 420 24 0 24" in full  # gauge fully filled
+    half = volume_banner(50, muted=False)
+    assert "m 0 0 l 210 0 210 24 0 24" in half
+
+
+def test_volume_banner_muted_has_empty_gauge() -> None:
+    muted = volume_banner(80, muted=True)
+    assert "Son coupé" in muted
+    assert "&H00D7FF&" not in muted  # no yellow fill
+    assert volume_banner(0, muted=False).count("\\p1") == 2  # panel and empty gauge only

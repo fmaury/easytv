@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from easytv.banner import channel_banner, message_banner
-from easytv.player import EndOfFile, Message, MpvPlayer, PlayerEvent, VideoError
+from easytv.banner import channel_banner, message_banner, volume_banner
+from easytv.player import EndOfFile, Layer, Message, MpvPlayer, PlayerEvent, VideoError
 
 pytestmark = pytest.mark.skipif(
     shutil.which("mpv") is None or shutil.which("ffmpeg") is None,
@@ -107,5 +107,24 @@ def test_banner_removal_is_accepted_by_mpv(video: Path) -> None:
     async def scenario(player: MpvPlayer) -> None:
         await player.show_banner(message_banner("hello"), None)
         await player._overlay(None)  # raises MpvError if mpv rejects the removal
+
+    run(scenario)
+
+
+def test_volume_is_accepted_by_mpv(video: Path) -> None:
+    async def scenario(player: MpvPlayer) -> None:
+        await player.set_volume(35, muted=True)
+        assert await player._command("get_property", "volume") == 35
+        assert await player._command("get_property", "mute") is True
+
+    run(scenario)
+
+
+def test_volume_gauge_and_banner_use_separate_layers(video: Path) -> None:
+    async def scenario(player: MpvPlayer) -> None:
+        await player.show_banner(message_banner("hello"), None)
+        await player.show_banner(volume_banner(50, muted=False), 0.1, Layer.VOLUME)
+        await asyncio.sleep(0.3)  # the gauge is removed, the banner stays
+        await player._overlay(None, Layer.BANNER)
 
     run(scenario)

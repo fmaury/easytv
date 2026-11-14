@@ -7,7 +7,14 @@ import pytest
 from easytv.remote import Action, Command
 from easytv.web import WEB_ACTIONS, Response, Status, WebRemote, parse_command
 
-STATUS = Status(channels=["Cartoons", "Docs"], current=2, video="doc1", unavailable=False)
+STATUS = Status(
+    channels=["Cartoons", "Docs"],
+    current=2,
+    video="doc1",
+    unavailable=False,
+    volume=60,
+    muted=False,
+)
 JSON = "application/json"
 
 
@@ -32,6 +39,9 @@ def body(response: Response) -> object:
         ({"action": "prev_channel"}, Command(Action.PREV_CHANNEL)),
         ({"action": "next_video"}, Command(Action.NEXT_VIDEO)),
         ({"action": "info"}, Command(Action.INFO)),
+        ({"action": "volume_up"}, Command(Action.VOLUME_UP)),
+        ({"action": "volume_down"}, Command(Action.VOLUME_DOWN)),
+        ({"action": "mute"}, Command(Action.MUTE)),
         ({"action": "goto", "number": 3}, Command(Action.GOTO, 3)),
     ],
 )
@@ -81,6 +91,8 @@ def test_status(web: WebRemote) -> None:
         "current": 2,
         "video": "doc1",
         "unavailable": False,
+        "volume": 60,
+        "muted": False,
     }
 
 
@@ -128,7 +140,7 @@ def test_routing_errors(web: WebRemote, method: str, path: str, status: int) -> 
 
 def serve(web: WebRemote, scenario: Callable[[int], Awaitable[None]]) -> None:
     async def main() -> None:
-        await web.start(0)
+        await web.start(0, host="127.0.0.1")
         try:
             await scenario(web.port)
         finally:
@@ -216,3 +228,18 @@ def test_http_server_survives_a_failing_handler(submitted: list[Command]) -> Non
         assert line == "HTTP/1.1 200 OK"
 
     serve(web, scenario)
+
+
+def test_close_does_not_wait_for_idle_connections(web: WebRemote) -> None:
+    async def main() -> None:
+        await web.start(0, host="127.0.0.1")
+        # A browser's speculative connection: opened, nothing sent.
+        _, writer = await asyncio.open_connection("127.0.0.1", web.port)
+        await asyncio.sleep(0.1)
+        loop = asyncio.get_running_loop()
+        started = loop.time()
+        await asyncio.wait_for(web.close(), timeout=2)
+        assert loop.time() - started < 1
+        writer.close()
+
+    asyncio.run(main())

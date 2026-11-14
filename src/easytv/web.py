@@ -36,6 +36,8 @@ class Status:
     current: int | None  # 1-based number of the current channel
     video: str | None  # title of the current video
     unavailable: bool  # no readable video on the current channel
+    volume: int  # 0-100
+    muted: bool
 
 
 @dataclass(frozen=True)
@@ -87,6 +89,7 @@ class WebRemote:
         self._submit = submit
         self._page = resources.files("easytv").joinpath("web.html").read_bytes()
         self._server: asyncio.Server | None = None
+        self._clients: set[asyncio.Task[None]] = set()
 
     @property
     def port(self) -> int:
@@ -94,16 +97,22 @@ class WebRemote:
         port: int = self._server.sockets[0].getsockname()[1]
         return port
 
-    async def start(self, port: int) -> None:
-        """Listen on all interfaces. Port 0 picks a free port (tests)."""
-        self._server = await asyncio.start_server(self._serve, port=port)
+    async def start(self, port: int, host: str | None = None) -> None:
+        """Listen on all interfaces by default. Port 0 picks a free port (tests)."""
+        self._server = await asyncio.start_server(self._serve, host=host, port=port)
         address = lan_address() or "<adresse-de-la-pi>"
         logger.info("web remote: http://%s:%d", address, self.port)
 
     async def close(self) -> None:
-        if self._server is not None:
-            self._server.close()
-            await self._server.wait_closed()
+        if self._server is None:
+            return
+        self._server.close()
+        # Browsers open connections in advance and may never use them: drop them now rather
+        # than wait for their read timeout, so stopping the TV is never delayed.
+        for client in self._clients:
+            client.cancel()
+        await asyncio.gather(*self._clients, return_exceptions=True)
+        await self._server.wait_closed()
 
     def handle(self, method: str, path: str, body: bytes = b"", content_type: str = "") -> Response:
         match path.split("?", 1)[0]:
@@ -133,27 +142,31 @@ class WebRemote:
                 return _error(404, "not found")
 
     async def _serve(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        task = asyncio.current_task()
+        assert task is not None
+        self._clients.add(task)
+        try:
+            writer.write(_encode(await self._respond(reader)))
+            await writer.drain()
+        except ConnectionError as e:
+            logger.debug("web client went away: %s", e)
+        finally:
+            self._clients.discard(task)
+            writer.close()
+
+    async def _respond(self, reader: asyncio.StreamReader) -> Response:
         try:
             request = await asyncio.wait_for(_read_request(reader), _READ_TIMEOUT)
         except (TimeoutError, asyncio.IncompleteReadError, ValueError) as e:
             logger.debug("bad HTTP request: %s", e)
-            response = _error(400, "bad request")
-        else:
-            if isinstance(request, Response):
-                response = request
-            else:
-                try:
-                    response = self.handle(*request)
-                except Exception:
-                    logger.exception("web request failed")
-                    response = _error(500, "internal error")
+            return _error(400, "bad request")
+        if isinstance(request, Response):
+            return request
         try:
-            writer.write(_encode(response))
-            await writer.drain()
-            writer.close()
-            await writer.wait_closed()
-        except ConnectionError as e:
-            logger.debug("web client went away: %s", e)
+            return self.handle(*request)
+        except Exception:
+            logger.exception("web request failed")
+            return _error(500, "internal error")
 
 
 async def _read_request(reader: asyncio.StreamReader) -> tuple[str, str, bytes, str] | Response:

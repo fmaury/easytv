@@ -97,6 +97,39 @@
   .pad button:active { transform: scale(0.96); background: var(--button-active); }
   .pad button.zap:active { background: color-mix(in srgb, var(--accent) 80%, white); }
 
+  .volume {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .volume button {
+    background: var(--button);
+    border-radius: var(--radius);
+    min-height: 88px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-weight: 600;
+    transition: transform 80ms ease, background 80ms ease;
+  }
+  .volume button:active { transform: scale(0.96); background: var(--button-active); }
+  .volume .icon { font-size: 26px; line-height: 1; }
+  .volume .level { font-size: 13px; font-weight: 500; color: var(--muted); }
+  .volume button.muted { outline: 2px solid var(--danger); }
+  .volume button.muted .level { color: var(--danger); }
+  .gauge {
+    width: 70%;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--button-active);
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .gauge > div { height: 100%; width: 0; background: var(--accent); transition: width 150ms ease; }
+
   h2 {
     font-size: 15px;
     font-weight: 600;
@@ -155,6 +188,23 @@
     <button class="zap" data-action="next_channel" aria-label="Chaîne suivante">
       <span class="icon">▲</span>Chaîne +
     </button>
+  </section>
+
+  <section class="volume" aria-label="Son">
+    <button data-action="volume_down" aria-label="Baisser le son">
+      <span class="icon">🔉</span>Son −
+    </button>
+    <button data-action="mute" id="mute" aria-label="Couper ou remettre le son">
+      <span><span id="mute-icon">🔇</span> <span id="mute-label">Couper</span></span>
+      <span class="level" id="level">–</span>
+      <span class="gauge"><div id="gauge"></div></span>
+    </button>
+    <button data-action="volume_up" aria-label="Monter le son">
+      <span class="icon">🔊</span>Son +
+    </button>
+  </section>
+
+  <section class="pad">
     <button data-action="next_video"><span class="icon">⏭</span>Vidéo suivante</button>
     <button data-action="info"><span class="icon">ℹ</span>Infos sur la TV</button>
   </section>
@@ -182,6 +232,12 @@
       video.textContent = status.unavailable ? "Chaîne indisponible" : status.video;
     }
     video.classList.toggle("warning", status.unavailable);
+
+    $("mute").classList.toggle("muted", status.muted);
+    $("mute-icon").textContent = status.muted ? "🔈" : "🔇";
+    $("mute-label").textContent = status.muted ? "Remettre" : "Couper";
+    $("level").textContent = status.muted ? "Son coupé" : `Volume ${status.volume}`;
+    $("gauge").style.width = status.muted ? "0%" : `${status.volume}%`;
 
     const list = $("channels");
     if (status.channels.length === 0) {
@@ -243,7 +299,7 @@
       setOnline(false);
     }
     // The TV switches asynchronously: look again shortly after.
-    setTimeout(refresh, 300);
+    setTimeout(refresh, 150);
     setTimeout(refresh, 1200);
   }
 

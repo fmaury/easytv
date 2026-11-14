@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from easytv.library import Channel, sort_key
-from easytv.state import ChannelState, TvState
+from easytv.state import MAX_VOLUME, ChannelState, TvState
 
 
 @dataclass(frozen=True)
@@ -69,6 +69,14 @@ class Tuner:
         else:
             video = _next_after(channel, current)
         return self._play(channel, video, 0.0, now)
+
+    def change_volume(self, delta: int) -> None:
+        """Like a TV: changing the volume also unmutes."""
+        self.state.volume = max(0, min(MAX_VOLUME, self.state.volume + delta))
+        self.state.muted = False
+
+    def toggle_mute(self) -> None:
+        self.state.muted = not self.state.muted
 
     def update_channels(self, channels: list[Channel], now: float) -> Playback | None:
         """Apply a rescan. Returns a new playback only if what was playing is gone.
