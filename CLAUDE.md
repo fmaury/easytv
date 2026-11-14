@@ -19,7 +19,8 @@ là où on l'a laissée.
    dernière sauvegarde.
 6. **Contenu disparu** : vidéo mémorisée supprimée → la suivante dans l'ordre de tri ;
    chaîne supprimée → première chaîne.
-7. **Vidéo illisible** → loguée et sautée, jamais de plantage.
+7. **Vidéo illisible** → loguée et sautée, jamais de plantage. Si aucune vidéo de la chaîne n'est
+   lisible → « Chaîne indisponible » (pas de boucle) ; nouvel essai si ses vidéos changent au rescan.
 8. **Rescan** périodique des dossiers : ajouts et suppressions pris en compte sans redémarrage.
 
 ## Architecture
@@ -32,7 +33,8 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
 | `library.py` | Scanne `channels_dir` → chaînes et vidéos triées | oui (testé avec `tmp_path`) |
 | `state.py` | État (dernière chaîne ; par chaîne : vidéo, position, heure de départ), sauvegarde JSON atomique | oui |
 | `tuner.py` | Zapping, vidéo suivante, rebouclage, règle de reprise, contenu disparu | **oui, cœur testé** |
-| `player.py` | Pilote mpv via sa socket JSON IPC : charger, aller à, OSD, événement fin de vidéo | non |
+| `banner.py` | Bandeau façon TV en ASS (numéro, nom sans préfixe, titre) et messages | oui |
+| `player.py` | Pilote mpv via sa socket JSON IPC : charger, aller à, bandeau (`osd-overlay`), événements | non |
 | `remote.py` | Lit les touches via `evdev` (CEC, télécommande USB, clavier) → actions | non |
 | `app.py` | Boucle principale : relie remote → tuner → player, sauvegarde et rescan périodiques | non |
 | `__main__.py` | Point d'entrée `easytv` | non |
@@ -66,13 +68,16 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
 ## Commandes
 
 ```bash
-uv run easytv [--config config.toml] [--fullscreen]   # lancer la TV
+uv run easytv [--config config.toml] [--fullscreen] [--debug]   # lancer la TV
 uv sync                      # dépendances
 uv run pytest                # tests
 uv run ruff format .         # mise en forme
 uv run ruff check --fix .    # lint
 uv run mypy                  # typage
 ```
+
+Codes de sortie : 0 = quitté (q/Échap, Ctrl+C), 1 = mpv fermé tout seul ou introuvable
+(systemd doit relancer), 2 = config invalide.
 
 Touches en mode `input = "keyboard"` (définies dans `KEY_BINDINGS`, `player.py`) :
 ↑/↓ chaîne suivante/précédente, 1–9 aller à la chaîne, → vidéo suivante, i/Entrée infos,
@@ -106,8 +111,8 @@ avant exécution. Les procédures récurrentes deviennent des skills dans `.clau
 0. Socle : CLAUDE.md, pyproject, outils ✅
 1. Logique pure + tests (config, library, state, tuner) ✅
 2. Lecteur mpv + clavier → TV fonctionnelle sur PC ✅
-3. Robustesse : vidéos illisibles (anti-boucle), logs, bandeau soigné ← **en cours**
-4. Installation sur la Pi (OS, mpv DRM, systemd, SFTP) + skills `/pi-setup`, `/deploy-pi`
+3. Robustesse : vidéos illisibles (anti-boucle), logs, bandeau soigné ✅
+4. Installation sur la Pi (OS, mpv DRM, systemd, SFTP) + skills `/pi-setup`, `/deploy-pi` ← **en cours**
 5. CEC avec la TV TCL + skill `/cec-test`
 6. Bonus : effet neige, liste des chaînes sur OK, page web de télécommande, Samba
 
