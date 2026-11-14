@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from easytv.app import NO_CHANNEL_TEXT, App
+from easytv.app import NO_CHANNEL_TEXT, UNAVAILABLE_TEXT, App, StopReason
+from easytv.banner import message_banner
 from easytv.config import Config
 from easytv.player import Closed, EndOfFile, Message, PlayerEvent, VideoError
 from easytv.state import ChannelState, TvState, load_state, save_state
@@ -18,15 +19,18 @@ class FakePlayer:
     events: asyncio.Queue[PlayerEvent] = field(default_factory=asyncio.Queue)
     position: float | None = None
     played: list[tuple[str, float]] = field(default_factory=list)
-    texts: list[str] = field(default_factory=list)
+    banners: list[str] = field(default_factory=list)
     stopped: int = 0
+    broken: set[str] = field(default_factory=set)  # file names that will not play
+    has_started: bool = False
 
     async def play(self, path: Path, start: float) -> None:
         self.played.append((f"{path.parent.name}/{path.name}", start))
         self.position = None
+        self.has_started = path.name not in self.broken
 
-    async def show_text(self, text: str, seconds: float) -> None:
-        self.texts.append(text)
+    async def show_banner(self, ass: str, seconds: float | None) -> None:
+        self.banners.append(ass)
 
     async def stop(self) -> None:
         self.stopped += 1
@@ -62,16 +66,16 @@ class Env:
         for _ in range(10):  # let the app process the event
             await asyncio.sleep(0)
 
-    def run(self, scenario: Callable[[App], Awaitable[None]]) -> None:
-        async def main() -> None:
+    def run(self, scenario: Callable[[App], Awaitable[None]]) -> StopReason:
+        async def main() -> StopReason:
             app = App(self.config, self.player, self.clock)
             task = asyncio.create_task(app.run())
             await asyncio.sleep(0)
             await scenario(app)
             await self.send(Message(("easytv", "quit")))
-            await asyncio.wait_for(task, timeout=2)
+            return await asyncio.wait_for(task, timeout=2)
 
-        asyncio.run(main())
+        return asyncio.run(main())
 
 
 @pytest.fixture
@@ -91,9 +95,11 @@ def test_start_plays_first_channel_with_banner(env: Env) -> None:
     async def scenario(app: App) -> None:
         pass
 
-    env.run(scenario)
+    assert env.run(scenario) is StopReason.QUIT
     assert env.player.played == [("1 - Cartoons/ep1.mp4", 0.0)]
-    assert env.player.texts == ["1. 1 - Cartoons\nep1.mp4"]
+    [banner] = env.player.banners
+    assert "   Cartoons" in banner
+    assert banner.endswith("ep1")
 
 
 def test_zap_saves_exact_position_and_resumes_later(env: Env) -> None:
@@ -156,12 +162,12 @@ def test_quit_saves_state_and_restart_resumes(env: Env) -> None:
 
 
 def test_closed_player_stops_the_app(env: Env) -> None:
-    async def main() -> None:
+    async def main() -> StopReason:
         app = App(env.config, env.player, env.clock)
         await env.player.events.put(Closed())
-        await asyncio.wait_for(app.run(), timeout=2)
+        return await asyncio.wait_for(app.run(), timeout=2)
 
-    asyncio.run(main())
+    assert asyncio.run(main()) is StopReason.PLAYER_CLOSED
     assert env.state().current_channel == "1 - Cartoons"
 
 
@@ -183,7 +189,7 @@ def test_no_channels(env: Env, tmp_path: Path) -> None:
     env.run(scenario)
     assert env.player.played == []
     assert env.player.stopped >= 1
-    assert env.player.texts[0] == NO_CHANNEL_TEXT
+    assert env.player.banners[0] == message_banner(NO_CHANNEL_TEXT)
 
 
 def test_corrupted_state_does_not_prevent_start(env: Env) -> None:
@@ -195,3 +201,82 @@ def test_corrupted_state_does_not_prevent_start(env: Env) -> None:
 
     env.run(scenario)
     assert env.player.played == [("1 - Cartoons/ep1.mp4", 0.0)]
+
+
+def test_info_shows_banner(env: Env) -> None:
+    async def scenario(app: App) -> None:
+        await env.send(Message(("easytv", "info")))
+
+    env.run(scenario)
+    assert len(env.player.banners) == 2
+
+
+# --- Unreadable videos -------------------------------------------------------
+
+
+def test_one_unreadable_video_is_skipped(env: Env) -> None:
+    env.make("1 - Cartoons/ep3.mp4")
+    env.player.broken = {"ep2.mp4"}
+
+    async def scenario(app: App) -> None:
+        await env.send(EndOfFile())  # ep1 ends normally
+        await env.send(VideoError("broken"))  # ep2 cannot be read
+        await env.send(EndOfFile())  # ep3 ends normally
+        await env.send(EndOfFile())
+
+    env.run(scenario)
+    assert [p for p, _ in env.player.played] == [
+        "1 - Cartoons/ep1.mp4",
+        "1 - Cartoons/ep2.mp4",
+        "1 - Cartoons/ep3.mp4",
+        "1 - Cartoons/ep1.mp4",
+        "1 - Cartoons/ep2.mp4",
+    ]
+    assert not any(UNAVAILABLE_TEXT in b for b in env.player.banners)
+
+
+def test_fully_broken_channel_stops_instead_of_looping(env: Env) -> None:
+    env.player.broken = {"ep1.mp4", "ep2.mp4"}
+
+    async def scenario(app: App) -> None:
+        await env.send(VideoError("broken"))
+        await env.send(EndOfFile())  # ended instantly, never played
+
+    env.run(scenario)
+    assert [p for p, _ in env.player.played] == ["1 - Cartoons/ep1.mp4", "1 - Cartoons/ep2.mp4"]
+    assert env.player.stopped == 1
+    assert env.player.banners[-1].startswith(message_banner(UNAVAILABLE_TEXT))
+    assert "Cartoons" in env.player.banners[-1]
+
+
+def test_zapping_still_works_after_broken_channel(env: Env) -> None:
+    env.player.broken = {"ep1.mp4", "ep2.mp4"}
+
+    async def scenario(app: App) -> None:
+        await env.send(VideoError("broken"))
+        await env.send(VideoError("broken"))
+        await env.send(Message(("easytv", "next_channel")))
+        await env.send(Message(("easytv", "info")))
+
+    env.run(scenario)
+    assert env.player.played[-1] == ("2 - Docs/doc1.mp4", 0.0)
+    assert "Docs" in env.player.banners[-1]
+
+
+def test_rescan_retries_broken_channel_when_videos_change(env: Env) -> None:
+    env.player.broken = {"ep1.mp4", "ep2.mp4"}
+
+    async def scenario(app: App) -> None:
+        await env.send(VideoError("broken"))
+        await env.send(VideoError("broken"))
+        await app.rescan()  # nothing changed: stays unavailable
+        env.player.broken = set()
+        env.make("1 - Cartoons/ep3.mp4")
+        await app.rescan()
+
+    env.run(scenario)
+    assert [p for p, _ in env.player.played] == [
+        "1 - Cartoons/ep1.mp4",
+        "1 - Cartoons/ep2.mp4",
+        "1 - Cartoons/ep3.mp4",
+    ]
