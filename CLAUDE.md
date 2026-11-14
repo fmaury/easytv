@@ -7,7 +7,8 @@ là où on l'a laissée.
 ## Règles de comportement
 
 1. **Chaînes** : chaque sous-dossier de `channels_dir` est une chaîne. Chaînes et vidéos sont triées
-   par nom (préfixer par `01 - `, `02 - `… pour fixer l'ordre). Les dossiers vides sont ignorés.
+   par nom, en tri naturel insensible à la casse (`ep2` avant `ep10`) ; préfixer par `01 - `,
+   `02 - `… pour fixer l'ordre. Les dossiers vides sont ignorés.
 2. **En quittant une chaîne**, on enregistre : vidéo en cours, position, heure de départ.
 3. **En revenant sur une chaîne** :
    - avant `resume_timeout` (1 h par défaut) → même vidéo, même position ;
@@ -16,7 +17,7 @@ là où on l'a laissée.
 5. **Dernière chaîne mémorisée** : au démarrage, la TV se rallume dessus (règle 3 appliquée).
    L'état est sauvegardé toutes les 5 s ; après une coupure, l'heure de départ est celle de la
    dernière sauvegarde.
-6. **Contenu disparu** : vidéo mémorisée supprimée → la suivante par ordre alphabétique ;
+6. **Contenu disparu** : vidéo mémorisée supprimée → la suivante dans l'ordre de tri ;
    chaîne supprimée → première chaîne.
 7. **Vidéo illisible** → loguée et sautée, jamais de plantage.
 8. **Rescan** périodique des dossiers : ajouts et suppressions pris en compte sans redémarrage.
@@ -93,8 +94,8 @@ avant exécution. Les procédures récurrentes deviennent des skills dans `.clau
 ## Feuille de route
 
 0. Socle : CLAUDE.md, pyproject, outils ✅
-1. Logique pure + tests (config, library, state, tuner) ← **en cours**
-2. Lecteur mpv + clavier → TV fonctionnelle sur PC
+1. Logique pure + tests (config, library, state, tuner) ✅
+2. Lecteur mpv + clavier → TV fonctionnelle sur PC ← **en cours**
 3. Robustesse : sauvegarde périodique, rescan, vidéos illisibles, logs, bandeau
 4. Installation sur la Pi (OS, mpv DRM, systemd, SFTP) + skills `/pi-setup`, `/deploy-pi`
 5. CEC avec la TV TCL + skill `/cec-test`
