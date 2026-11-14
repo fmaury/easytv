@@ -25,6 +25,7 @@ class Config:
     rescan_interval: float = 30
     video_extensions: frozenset[str] = DEFAULT_VIDEO_EXTENSIONS
     input: InputMode = InputMode.REMOTE
+    mpv_args: tuple[str, ...] = ()
 
 
 def load_config(path: Path) -> Config:
@@ -45,6 +46,7 @@ def load_config(path: Path) -> Config:
         rescan_interval=_seconds(data, "rescan_interval", defaults.rescan_interval),
         video_extensions=_extensions(data, defaults.video_extensions),
         input=_input_mode(data, defaults.input),
+        mpv_args=_mpv_args(data),
     )
 
 
@@ -81,3 +83,10 @@ def _input_mode(data: dict[str, Any], default: InputMode) -> InputMode:
     except ValueError as e:
         choices = ", ".join(f'"{m}"' for m in InputMode)
         raise ConfigError(f"input must be one of {choices}") from e
+
+
+def _mpv_args(data: dict[str, Any]) -> tuple[str, ...]:
+    value = data.get("mpv_args", [])
+    if not isinstance(value, list) or not all(isinstance(v, str) and v for v in value):
+        raise ConfigError("mpv_args must be a list of strings")
+    return tuple(value)

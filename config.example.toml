@@ -1,5 +1,6 @@
-# Configuration d'EasyTV.
-# Copier ce fichier en config.toml et l'adapter.
+# Configuration d'EasyTV, prévue pour une Raspberry Pi.
+# install.sh la copie en config.toml (sans jamais écraser une config existante).
+# Sur un PC de développement : input = "keyboard" et mpv_args = [].
 
 # Dossier contenant un sous-dossier par chaîne.
 # Préfixer les dossiers par "01 - ", "02 - "… pour fixer l'ordre des chaînes.
@@ -17,11 +18,20 @@ state_file = "/var/lib/easytv/state.json"
 # Au-delà, elle reprend la même vidéo depuis le début.
 resume_timeout = 3600  # 1 h
 
-# Fréquence de sauvegarde de l'état (en secondes).
-save_interval = 5
+# Fréquence de sauvegarde de l'état (en secondes). 30 s ménage la carte SD ; l'état est de toute
+# façon sauvegardé immédiatement à chaque zapping et à l'arrêt.
+save_interval = 30
 
 # Fréquence de détection des vidéos et chaînes ajoutées ou supprimées (en secondes).
 rescan_interval = 30
 
 # Extensions reconnues comme vidéos (optionnel).
 # video_extensions = [".mp4", ".mkv", ".avi", ".mov", ".m4v", ".webm", ".ts"]
+
+# Options passées à mpv, propres à la machine.
+mpv_args = [
+    "--gpu-context=drm",                             # affichage direct sur la TV, sans bureau
+    "--hwdec=v4l2m2m",                               # décodage H.264 matériel de la Pi
+    "--ao=alsa",                                     # son sans PipeWire (service système)
+    "--audio-device=alsa/hdmi:CARD=vc4hdmi,DEV=0",   # son par le HDMI de la TV
+]

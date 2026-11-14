@@ -45,7 +45,11 @@ def main() -> None:
 async def _run(config: Config, *, fullscreen: bool) -> StopReason:
     if config.input is InputMode.REMOTE:
         logger.warning("remote control is not available yet: zapping is disabled")
-    player = MpvPlayer(keyboard=config.input is InputMode.KEYBOARD, fullscreen=fullscreen)
+    player = MpvPlayer(
+        keyboard=config.input is InputMode.KEYBOARD,
+        fullscreen=fullscreen,
+        extra_args=config.mpv_args,
+    )
     await player.start()
     try:
         return await App(config, player).run()

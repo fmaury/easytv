@@ -22,6 +22,7 @@ def test_full_config(tmp_path: Path) -> None:
         rescan_interval = 60
         video_extensions = [".MP4", "mkv"]
         input = "keyboard"
+        mpv_args = ["--hwdec=v4l2m2m", "--ao=alsa"]
         """,
     )
     config = load_config(path)
@@ -32,6 +33,7 @@ def test_full_config(tmp_path: Path) -> None:
     assert config.rescan_interval == 60
     assert config.video_extensions == {".mp4", ".mkv"}
     assert config.input is InputMode.KEYBOARD
+    assert config.mpv_args == ("--hwdec=v4l2m2m", "--ao=alsa")
 
 
 def test_defaults(tmp_path: Path) -> None:
@@ -42,6 +44,7 @@ def test_defaults(tmp_path: Path) -> None:
     assert config.rescan_interval == 30
     assert config.video_extensions == DEFAULT_VIDEO_EXTENSIONS
     assert config.input is InputMode.REMOTE
+    assert config.mpv_args == ()
 
 
 def test_home_is_expanded(tmp_path: Path) -> None:
@@ -93,3 +96,10 @@ def test_invalid_input_mode(tmp_path: Path, value: str) -> None:
 def test_example_config_is_valid() -> None:
     config = load_config(Path(__file__).parent.parent / "config.example.toml")
     assert config.input is InputMode.REMOTE
+
+
+@pytest.mark.parametrize("value", ['"--hwdec=v4l2m2m"', "[1]", '[""]'])
+def test_invalid_mpv_args(tmp_path: Path, value: str) -> None:
+    path = write(tmp_path, f'channels_dir = "/tv"\nstate_file = "/s.json"\nmpv_args = {value}\n')
+    with pytest.raises(ConfigError, match="mpv_args"):
+        load_config(path)
