@@ -11,6 +11,8 @@ WorkingDirectory=@DIR@
 ExecStartPre=-/usr/bin/timeout 60 /usr/lib/systemd/systemd-time-wait-sync
 ExecStart=@DIR@/.venv/bin/easytv --config @DIR@/config.toml --fullscreen
 StateDirectory=easytv
+# Only privilege granted: listen on port 80 for the web remote (no other root rights).
+AmbientCapabilities=CAP_NET_BIND_SERVICE
 # A TV must always come back, even after a clean exit.
 Restart=always
 RestartSec=3

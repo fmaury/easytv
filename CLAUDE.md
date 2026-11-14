@@ -43,7 +43,8 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
 
 - La logique pure (`tuner`, `state`, `library`, `config`) ne dépend ni de mpv, ni des entrées, ni de
   l'horloge : **l'heure est passée en paramètre**.
-- **Télécommande web** (`web_port`, 8080 par défaut, 0 = désactivée) : les commandes reçues passent
+- **Télécommande web** (`web_port` : 8080 par défaut, 80 sur la Pi grâce à
+  `AmbientCapabilities=CAP_NET_BIND_SERVICE` dans le service ; 0 = désactivée) : les commandes reçues passent
   par `App.submit` → même file d'événements que le clavier (pas de concurrence avec mpv).
   `quit` n'est pas proposé ; `POST /api/command` exige `Content-Type: application/json` (bloque
   les requêtes venant d'autres sites).

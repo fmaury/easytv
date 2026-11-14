@@ -19,8 +19,9 @@ state_file = "/var/lib/easytv/state.json"
 resume_timeout = 3600  # 1 h
 
 # Port de la page web de télécommande : sur un téléphone du même Wi-Fi, ouvrir
-# http://easytv.local:8080 (ou http://<adresse-ip-de-la-pi>:8080). 0 la désactive.
-web_port = 8080
+# http://easytv.local (ou http://<adresse-ip-de-la-pi>). 0 la désactive.
+# 80 est autorisé par le service systemd (CAP_NET_BIND_SERVICE). Sur un PC : 8080.
+web_port = 80
 
 # Fréquence de sauvegarde de l'état (en secondes). 30 s ménage la carte SD ; l'état est de toute
 # façon sauvegardé immédiatement à chaque zapping et à l'arrêt.

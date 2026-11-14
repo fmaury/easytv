@@ -132,11 +132,15 @@ ffmpeg -i entree.mkv -c:v libx264 -preset medium -crf 21 -vf "scale='min(1920,iw
 
 Sur un téléphone connecté au **Wi-Fi de la maison**, ouvre dans le navigateur :
 
-**`http://easytv.local:8080`**
+**`http://easytv.local`** (`easytv` = le nom d'hôte choisi à la préparation de la carte SD)
 
-Si la page ne s'ouvre pas, utilise l'adresse IP de la Pi à la place, par exemple
-`http://192.168.1.31:8080`. EasyTV l'affiche au démarrage dans son journal
+Ce nom est annoncé par la Pi elle-même sur le réseau : pas besoin de le déclarer dans la box. Il
+marche sur iPhone, Mac et PC ; sur certains téléphones Android, non. Dans ce cas, utilise l'adresse
+IP de la Pi, par exemple `http://192.168.1.31`. EasyTV l'affiche au démarrage dans son journal
 (`journalctl -u easytv | grep "web remote"`), ou `hostname -I` sur la Pi la donne.
+
+**Pour que l'adresse IP ne change jamais**, réserve-la dans ta box. Sur une Freebox : Freebox OS
+(`mafreebox.freebox.fr`) → Paramètres de la Freebox → DHCP → Baux statiques → ajouter la Pi.
 
 La page affiche la chaîne en cours et permet de :
 
@@ -167,7 +171,7 @@ modification : `sudo systemctl restart easytv`.
 | `state_file` | `/var/lib/easytv/state.json` | Mémoire des positions |
 | `input` | `remote` | `remote` (télécommande) ou `keyboard` (clavier, sur PC) |
 | `mpv_args` | réglages Pi | Options du lecteur vidéo (décodage matériel, son HDMI) |
-| `web_port` | `8080` | Port de la page web de télécommande (`0` la désactive) |
+| `web_port` | `80` | Port de la page web de télécommande (`0` la désactive) |
 | `video_extensions` | `.mp4 .mkv .avi .mov .m4v .webm .ts` | Extensions reconnues |
 
 ## 7. Mettre à jour
