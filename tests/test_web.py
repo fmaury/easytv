@@ -14,6 +14,7 @@ STATUS = Status(
     unavailable=False,
     volume=60,
     muted=False,
+    stopped=False,
 )
 JSON = "application/json"
 
@@ -42,6 +43,8 @@ def body(response: Response) -> object:
         ({"action": "volume_up"}, Command(Action.VOLUME_UP)),
         ({"action": "volume_down"}, Command(Action.VOLUME_DOWN)),
         ({"action": "mute"}, Command(Action.MUTE)),
+        ({"action": "stop"}, Command(Action.STOP)),
+        ({"action": "play"}, Command(Action.PLAY)),
         ({"action": "goto", "number": 3}, Command(Action.GOTO, 3)),
     ],
 )
@@ -93,6 +96,7 @@ def test_status(web: WebRemote) -> None:
         "unavailable": False,
         "volume": 60,
         "muted": False,
+        "stopped": False,
     }
 
 

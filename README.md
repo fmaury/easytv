@@ -149,7 +149,9 @@ La page affiche la chaîne en cours et permet de :
 - **monter, baisser ou couper le son** (une jauge s'affiche en haut à droite de la TV ; le volume
   est retenu, même après un redémarrage) ;
 - passer à la **vidéo suivante** ;
-- réafficher le **bandeau d'infos** sur la TV.
+- réafficher le **bandeau d'infos** sur la TV ;
+- **arrêter la vidéo** (écran noir, plus de son) ; **Regarder** la relance là où elle en était
+  (ou au début de la vidéo après plus d'une heure). Zapper relance aussi la lecture.
 
 **Astuce** : ajoute la page à l'écran d'accueil (menu du navigateur → « Ajouter à l'écran
 d'accueil ») pour l'ouvrir comme une application.

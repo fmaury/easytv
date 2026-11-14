@@ -23,6 +23,8 @@ KEY_BINDINGS = "".join(
         "- script-message easytv volume_down\n",
         "+ script-message easytv volume_up\n",
         "m script-message easytv mute\n",
+        "s script-message easytv stop\n",
+        "p script-message easytv play\n",
         "ENTER script-message easytv info\n",
         "f cycle fullscreen\n",
         "q script-message easytv quit\n",

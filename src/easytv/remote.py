@@ -17,6 +17,8 @@ class Action(StrEnum):
     VOLUME_UP = "volume_up"
     VOLUME_DOWN = "volume_down"
     MUTE = "mute"
+    STOP = "stop"  # stop the video (black screen) until PLAY or a zap
+    PLAY = "play"
     QUIT = "quit"
 
 

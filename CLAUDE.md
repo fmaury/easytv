@@ -101,7 +101,11 @@ Codes de sortie : 0 = quitté (q/Échap, Ctrl+C), 1 = mpv fermé tout seul ou in
 
 Touches en mode `input = "keyboard"` (définies dans `KEY_BINDINGS`, `player.py`) :
 ↑/↓ chaîne suivante/précédente, 1–9 aller à la chaîne, → vidéo suivante, i/Entrée infos,
-`-`/`+` volume, m couper le son, f plein écran, q/Échap quitter.
+`-`/`+` volume, m couper le son, s arrêter la vidéo, p la relancer, f plein écran, q/Échap quitter.
+
+Arrêt (`stop`/`play`, idempotents pour plusieurs téléphones) : compte comme quitter la chaîne
+(règle 3 au retour) ; zapper ou « vidéo suivante » relance la lecture ; pendant l'arrêt, le rescan
+ne lance rien. Non mémorisé : au redémarrage, la TV rejoue.
 
 Volume : celui de mpv (0–100, pas de 5), indépendant de celui de la TV ; changer le volume remet le
 son. Jauge et bandeau sont sur deux calques mpv distincts (`Layer`, `player.py`).

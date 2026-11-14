@@ -22,6 +22,7 @@ class Tuner:
         self.state = state
         self._resume_timeout = resume_timeout
         self._index: int | None = None
+        self.stopped = False
 
     @property
     def channels(self) -> list[Channel]:
@@ -44,24 +45,47 @@ class Tuner:
             entry.position = position
             entry.left_at = now
 
-    def zap(self, step: int, now: float) -> Playback | None:
+    def stop(self, position: float | None, now: float) -> None:
+        """Stop watching: like leaving the current channel, without tuning another one."""
+        if self.stopped:
+            return
+        if position is not None:
+            self.report_position(position, now)
+        else:
+            self._leave(now)
+        self.stopped = True
+
+    def resume(self, now: float) -> Playback | None:
+        """Watch again after `stop`: the current channel, under the resume rule."""
+        self.stopped = False
         if self._index is None:
             return self.start(now)
+        return self._tune(self._index, now)
+
+    def zap(self, step: int, now: float) -> Playback | None:
         self._leave(now)
+        self.stopped = False
+        if self._index is None:
+            return self.start(now)
         return self._tune((self._index + step) % len(self._channels), now)
 
     def goto(self, number: int, now: float) -> Playback | None:
-        """Tune to channel `number` (1-based). Out of range or current channel: no change."""
+        """Tune to channel `number` (1-based). Out of range or current channel: no change,
+        unless stopped: the current channel then plays again."""
         index = number - 1
-        if not 0 <= index < len(self._channels) or index == self._index:
+        if not 0 <= index < len(self._channels):
             return None
+        if index == self._index:
+            return self.resume(now) if self.stopped else None
         self._leave(now)
+        self.stopped = False
         return self._tune(index, now)
 
     def next_video(self, now: float) -> Playback | None:
         channel = self.current
         if channel is None:
             return None
+        self.stopped = False
         current = self.state.channels[channel.name].video
         if current in channel.videos:
             i = channel.videos.index(current)
@@ -82,6 +106,7 @@ class Tuner:
         """Apply a rescan. Returns a new playback only if what was playing is gone.
 
         When no channel is left, `current` becomes None and the caller must stop playback.
+        `stopped` is kept: when stopped, the caller must not play the returned playback.
         """
         playing = self.current
         self._channels = list(channels)
@@ -109,7 +134,8 @@ class Tuner:
 
     def _leave(self, now: float) -> None:
         channel = self.current
-        if channel is not None:
+        # When stopped, the channel was already left at the time of the stop.
+        if channel is not None and not self.stopped:
             self.state.channels[channel.name].left_at = now
 
     def _tune(self, index: int, now: float) -> Playback:

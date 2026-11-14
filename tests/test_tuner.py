@@ -216,6 +216,78 @@ def test_all_channels_removed_stops_playback() -> None:
     assert t.current is None
 
 
+# --- Stop and play -----------------------------------------------------------
+
+
+def test_stop_leaves_the_channel_and_resume_within_timeout_keeps_position() -> None:
+    t = tuner()
+    t.start(T0)
+    t.stop(100.0, T0 + 100)
+    assert t.stopped
+    assert t.state.channels[CARTOONS.name] == ChannelState("ep1.mp4", 100.0, T0 + 100)
+    assert t.resume(T0 + 100 + 30 * MINUTE) == play(CARTOONS, "ep1.mp4", 100.0)
+    assert not t.stopped
+
+
+def test_resume_after_timeout_restarts_the_video() -> None:
+    t = tuner()
+    t.start(T0)
+    t.stop(100.0, T0 + 100)
+    assert t.resume(T0 + 100 + 2 * HOUR) == play(CARTOONS, "ep1.mp4")
+
+
+def test_stop_twice_keeps_the_first_stop_time() -> None:
+    t = tuner()
+    t.start(T0)
+    t.stop(100.0, T0 + 100)
+    t.stop(None, T0 + HOUR)
+    assert t.state.channels[CARTOONS.name].left_at == T0 + 100
+
+
+def test_zap_while_stopped_plays_and_keeps_the_stop_time() -> None:
+    t = tuner()
+    t.start(T0)
+    t.stop(100.0, T0 + 100)
+    assert t.zap(+1, T0 + 2 * HOUR) == play(DOCS, "doc1.mp4")
+    assert not t.stopped
+    # Left when stopped, not when zapping away: more than an hour ago.
+    assert t.state.channels[CARTOONS.name].left_at == T0 + 100
+
+
+def test_goto_current_channel_while_stopped_resumes() -> None:
+    t = tuner()
+    t.start(T0)
+    t.stop(100.0, T0 + 100)
+    assert t.goto(1, T0 + 200) == play(CARTOONS, "ep1.mp4", 100.0)
+    assert not t.stopped
+
+
+def test_next_video_while_stopped_plays() -> None:
+    t = tuner()
+    t.start(T0)
+    t.stop(100.0, T0 + 100)
+    assert t.next_video(T0 + 200) == play(CARTOONS, "ep2.mp4")
+    assert not t.stopped
+
+
+def test_rescan_while_stopped_stays_stopped() -> None:
+    t = tuner()
+    t.start(T0)
+    t.stop(100.0, T0 + 100)
+    t.update_channels([DOCS], T0 + 200)
+    assert t.stopped
+    assert t.resume(T0 + 300) == play(DOCS, "doc1.mp4")
+
+
+def test_stop_and_resume_without_channels() -> None:
+    t = tuner(channels=[])
+    t.start(T0)
+    t.stop(None, T0)
+    assert t.stopped
+    assert t.resume(T0) is None
+    assert not t.stopped
+
+
 def test_volume_is_clamped_and_unmutes() -> None:
     t = tuner(TvState(volume=97, muted=True))
     t.change_volume(+5)

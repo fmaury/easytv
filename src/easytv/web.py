@@ -38,6 +38,7 @@ class Status:
     unavailable: bool  # no readable video on the current channel
     volume: int  # 0-100
     muted: bool
+    stopped: bool  # video stopped from the remote
 
 
 @dataclass(frozen=True)

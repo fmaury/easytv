@@ -26,6 +26,7 @@ VOLUME_SECONDS = 2.5
 VOLUME_STEP = 5
 NO_CHANNEL_TEXT = "Aucune chaîne"
 UNAVAILABLE_TEXT = "Chaîne indisponible"
+STOPPED_TEXT = "Arrêt"
 
 
 class StopReason(Enum):
@@ -81,6 +82,7 @@ class App:
             unavailable=self._unavailable is not None,
             volume=state.volume,
             muted=state.muted,
+            stopped=self._tuner.stopped,
         )
 
     async def save(self) -> None:
@@ -102,6 +104,8 @@ class App:
             logger.info("channel added: %s", name)
         for name in sorted(before - after):
             logger.info("channel removed: %s", name)
+        if self._tuner.stopped:
+            return  # nothing plays: changes apply when playback resumes
 
         current = self._tuner.current
         if playback is not None:
@@ -153,6 +157,9 @@ class App:
                 volume_banner(state.volume, state.muted), VOLUME_SECONDS, Layer.VOLUME
             )
             return None
+        if command.action is Action.STOP:
+            await self._stop()
+            return None
 
         position = self._player.position
         now = self._clock()
@@ -169,12 +176,26 @@ class App:
                 playback = self._tuner.goto(command.number, now)
             case Action.NEXT_VIDEO:
                 playback = self._tuner.next_video(now)
+            case Action.PLAY if self._tuner.stopped:
+                logger.info("playing again")
+                playback = self._tuner.resume(now)
+                if playback is None:  # no channel left
+                    await self._show(None)
             case _:
                 return None
         if playback is not None:
             await self._show(playback, reset=command.action is not Action.NEXT_VIDEO)
             await self.save()
         return None
+
+    async def _stop(self) -> None:
+        if self._tuner.stopped:
+            return
+        self._tuner.stop(self._player.position, self._clock())
+        logger.info("stopped")
+        await self._player.stop()
+        await self._player.show_banner(message_banner(STOPPED_TEXT), BANNER_SECONDS)
+        await self.save()
 
     async def _apply_volume(self) -> None:
         await self._player.set_volume(self._tuner.state.volume, self._tuner.state.muted)

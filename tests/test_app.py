@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from easytv.app import NO_CHANNEL_TEXT, UNAVAILABLE_TEXT, App, StopReason
+from easytv.app import NO_CHANNEL_TEXT, STOPPED_TEXT, UNAVAILABLE_TEXT, App, StopReason
 from easytv.banner import message_banner, volume_banner
 from easytv.config import Config
 from easytv.player import Closed, EndOfFile, Layer, Message, PlayerEvent, VideoError
@@ -222,10 +222,10 @@ def test_info_shows_banner(env: Env) -> None:
 
 def test_submitted_command_is_executed_and_status_follows(env: Env) -> None:
     async def scenario(app: App) -> None:
-        assert app.status() == Status(["Cartoons", "Docs"], 1, "ep1", False, 100, False)
+        assert app.status() == Status(["Cartoons", "Docs"], 1, "ep1", False, 100, False, False)
         app.submit(Command(Action.GOTO, 2))
         await env.send(Message(("easytv", "info")))  # let the app run
-        assert app.status() == Status(["Cartoons", "Docs"], 2, "doc1", False, 100, False)
+        assert app.status() == Status(["Cartoons", "Docs"], 2, "doc1", False, 100, False, False)
 
     env.run(scenario)
     assert [p for p, _ in env.player.played] == ["1 - Cartoons/ep1.mp4", "2 - Docs/doc1.mp4"]
@@ -235,7 +235,7 @@ def test_status_without_channels(env: Env, tmp_path: Path) -> None:
     env.config = Config(channels_dir=tmp_path / "empty", state_file=tmp_path / "s.json")
 
     async def scenario(app: App) -> None:
-        assert app.status() == Status([], None, None, False, 100, False)
+        assert app.status() == Status([], None, None, False, 100, False, False)
 
     env.run(scenario)
 
@@ -348,3 +348,63 @@ def test_volume_up_unmutes(env: Env) -> None:
         assert env.player.volume == (100, False)
 
     env.run(scenario)
+
+
+# --- Stop and play -----------------------------------------------------------
+
+
+def test_stop_then_play_resumes_where_it_stopped(env: Env) -> None:
+    async def scenario(app: App) -> None:
+        env.player.position = 42.0
+        env.clock.now += 42
+        await env.send(Message(("easytv", "stop")))
+        assert env.player.stopped == 1
+        assert env.player.banners[-1] == message_banner(STOPPED_TEXT)
+        assert app.status().stopped
+        assert env.state().channels["1 - Cartoons"] == ChannelState("ep1.mp4", 42.0, T0 + 42)
+
+        await env.send(Message(("easytv", "stop")))  # a second phone presses too
+        assert env.player.stopped == 1
+
+        env.clock.now += 600
+        await env.send(Message(("easytv", "play")))
+        assert not app.status().stopped
+        await env.send(Message(("easytv", "play")))  # already playing: nothing
+
+    env.run(scenario)
+    assert env.player.played == [("1 - Cartoons/ep1.mp4", 0.0), ("1 - Cartoons/ep1.mp4", 42.0)]
+
+
+def test_zap_while_stopped_plays(env: Env) -> None:
+    async def scenario(app: App) -> None:
+        await env.send(Message(("easytv", "stop")))
+        await env.send(Message(("easytv", "next_channel")))
+        assert not app.status().stopped
+
+    env.run(scenario)
+    assert [p for p, _ in env.player.played] == ["1 - Cartoons/ep1.mp4", "2 - Docs/doc1.mp4"]
+
+
+def test_rescan_while_stopped_plays_nothing(env: Env) -> None:
+    async def scenario(app: App) -> None:
+        await env.send(Message(("easytv", "stop")))
+        (env.root / "tv" / "1 - Cartoons" / "ep1.mp4").unlink()
+        await app.rescan()
+        assert len(env.player.played) == 1
+        await env.send(Message(("easytv", "play")))
+
+    env.run(scenario)
+    assert [p for p, _ in env.player.played] == ["1 - Cartoons/ep1.mp4", "1 - Cartoons/ep2.mp4"]
+
+
+def test_play_after_all_channels_vanished(env: Env) -> None:
+    async def scenario(app: App) -> None:
+        await env.send(Message(("easytv", "stop")))
+        for video in (env.root / "tv").rglob("*.mp4"):
+            video.unlink()
+        await app.rescan()
+        await env.send(Message(("easytv", "play")))
+        assert not app.status().stopped
+
+    env.run(scenario)
+    assert env.player.banners[-1] == message_banner(NO_CHANNEL_TEXT)
