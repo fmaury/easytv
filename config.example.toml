@@ -8,7 +8,7 @@ channels_dir = "/media/tv"
 
 # Comment on zappe :
 #   "keyboard" : au clavier, dans la fenêtre mpv (développement sur PC)
-#   "remote"   : télécommande de la TV (HDMI-CEC) ou télécommande USB (sur la Pi)
+#   "remote"   : par la page web sur téléphone, voir web_port (sur la Pi)
 input = "remote"
 
 # Fichier où EasyTV mémorise la dernière chaîne et la position de chaque chaîne.

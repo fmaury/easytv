@@ -5,9 +5,6 @@ description = "Raspberry Pi TV: folders are channels, each channel resumes where
 requires-python = ">=3.11"
 dependencies = []
 
-[project.optional-dependencies]
-pi = ["evdev>=1.7"]
-
 [project.scripts]
 easytv = "easytv.__main__:main"
 
@@ -41,10 +38,6 @@ select = [
 [tool.mypy]
 strict = true
 files = ["src", "tests"]
-
-[[tool.mypy.overrides]]
-module = ["evdev.*"]
-ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

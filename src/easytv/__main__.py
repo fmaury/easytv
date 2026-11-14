@@ -51,7 +51,7 @@ async def _run(config: Config, *, fullscreen: bool) -> StopReason:
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, main_task.cancel)
 
     if config.input is InputMode.REMOTE and not config.web_port:
-        logger.warning("remote control is not available yet and web_port = 0: no way to zap")
+        logger.warning("input = remote and web_port = 0: no way to zap")
     player = MpvPlayer(
         keyboard=config.input is InputMode.KEYBOARD,
         fullscreen=fullscreen,

@@ -1,7 +1,7 @@
 # EasyTV
 
 « TV perso » sur Raspberry Pi 3 Model B branchée en HDMI sur une TV : chaque dossier est une chaîne, chaque
-chaîne est une playlist de vidéos, on zappe avec la télécommande de la TV et chaque chaîne reprend
+chaîne est une playlist de vidéos, on zappe depuis une page web sur téléphone et chaque chaîne reprend
 là où on l'a laissée.
 
 ## Règles de comportement
@@ -36,7 +36,7 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
 | `tuner.py` | Zapping, vidéo suivante, rebouclage, règle de reprise, contenu disparu, volume | **oui, cœur testé** |
 | `banner.py` | Bandeau façon TV en ASS (numéro, nom sans préfixe, titre), jauge de volume, messages | oui |
 | `player.py` | Pilote mpv via sa socket JSON IPC : charger, aller à, bandeau (`osd-overlay`), événements | non |
-| `remote.py` | Commandes (`Action`, `Command`) ↔ `script-message` mpv ; à venir : touches `evdev` | oui |
+| `remote.py` | Commandes (`Action`, `Command`) ↔ `script-message` mpv | oui |
 | `web.py` + `web.html` | Télécommande web pour téléphone : serveur HTTP `asyncio` (stdlib), `/api/status`, `/api/command` | non |
 | `app.py` | Boucle principale : relie remote → tuner → player, sauvegarde et rescan périodiques | non |
 | `__main__.py` | Point d'entrée `easytv` | non |
@@ -49,15 +49,15 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
   `quit` n'est pas proposé ; `POST /api/command` exige `Content-Type: application/json` (bloque
   les requêtes venant d'autres sites).
 - Option `input` de la config : `"keyboard"` (dev sur PC : mpv fenêtré, touches transmises par mpv
-  via `script-message`) ou `"remote"` (Pi : télécommande CEC/USB lue avec `evdev`).
+  via `script-message`) ou `"remote"` (Pi : mpv ignore le clavier, on zappe par la page web).
 
 ## Stack
 
 - **Cible** : Raspberry Pi 3 Model B (1 Go de RAM), Raspberry Pi OS Lite 64 bits (sans bureau), service **systemd**.
 - **Lecteur** : mpv plein écran en DRM (sans X/Wayland), décodage matériel H.264,
   bandeau de zapping via l'OSD mpv.
-- **Télécommande** : HDMI-CEC via le pilote noyau (`/dev/cec0`), touches exposées comme
-  périphérique d'entrée et lues avec `evdev`.
+- **Télécommande** : la page web, sur les téléphones du Wi-Fi de la maison. Pas de télécommande
+  physique, par choix : marche chez tout le monde, rien à acheter, plusieurs téléphones à la fois.
 - **Config** : `config.toml` (écrit à la main, `tomllib`), non versionné → modèle `config.example.toml`.
 - **État** : `state.json` (écrit par le programme), non versionné.
 - **Ajout des vidéos** : SFTP (OpenSSH de la Pi), dans `/media/tv/<chaîne>/`.
@@ -68,7 +68,7 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
 - Un seul port HDMI (taille normale), qui gère le CEC.
 - TV **TCL 50P610** : CEC = « T-Link ». **Aucune touche transmise** à la Pi (voir feuille de route) ;
   CH+ change d'entrée HDMI. Elle affiche « HDMI1 », jamais le nom OSD.
-  → zapping par la page web, puis infrarouge ou télécommande USB.
+  → zapping par la page web.
   Vérifier les touches reçues : `cec-ctl -d /dev/cec0 --playback -M`.
 - Décodage matériel Pi 3 : **H.264 uniquement** (jusqu'à 1080p). Pas de HEVC matériel :
   HEVC, VP9, AV1 saccadent. Pas de conversion automatique dans l'app : vidéos fournies en H.264.
@@ -154,12 +154,12 @@ avant exécution. Les procédures récurrentes deviennent des skills dans `.clau
 2. Lecteur mpv + clavier → TV fonctionnelle sur PC ✅
 3. Robustesse : vidéos illisibles (anti-boucle), logs, bandeau soigné ✅
 4. Installation sur la Pi : `install.sh`, service systemd, README ✅
-5. Télécommande : ← **en cours**
-   - page web sur téléphone ✅
+5. Télécommande : page web sur téléphone, avec volume ✅
    - CEC : **la TCL 50P610 ne transmet aucune touche** (testé le 2026-11-14 : Pi seule sur le bus,
      CEC 1.4, identifiant fabricant TCL, type tuner → rien ; la TV demande seulement le nom OSD).
      Elle sait en revanche basculer sur l'entrée de la Pi (`active-source`).
-   - à venir : récepteur infrarouge GPIO (télécommande TCL RC802N) ou télécommande USB, via `evdev`
+   - Télécommande physique (infrarouge GPIO ou USB via `evdev`) : **écartée** le 2026-11-14,
+     la page web suffit.
 6. Bonus : effet neige, liste des chaînes sur OK, Samba
 
 Mettre à jour la phase en cours à chaque étape terminée.

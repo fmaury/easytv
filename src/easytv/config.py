@@ -13,7 +13,7 @@ class ConfigError(Exception):
 
 class InputMode(StrEnum):
     KEYBOARD = "keyboard"  # keys pressed in the mpv window (development on a PC)
-    REMOTE = "remote"  # input devices read with evdev: TV remote via CEC, USB remote (Pi)
+    REMOTE = "remote"  # no keyboard in mpv: zapping comes from the web remote (Pi)
 
 
 @dataclass(frozen=True)

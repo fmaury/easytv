@@ -11,8 +11,8 @@ Transforme une Raspberry Pi branchée sur ta TV en **chaînes de télé perso** 
 On zappe **depuis son téléphone** : une page web, sur le Wi-Fi de la maison, avec les boutons et la
 liste des chaînes ([voir plus bas](#5-zapper-avec-le-téléphone)).
 
-> ⚠️ **Télécommande de la TV** : selon les modèles, la TV ne transmet pas ses touches à la Pi
-> (c'est le cas des TCL testées). Une télécommande dédiée est à l'étude.
+> La télécommande de la TV ne sert pas à zapper : beaucoup de TV ne transmettent pas ses touches
+> à la Pi. Le téléphone la remplace, et tous ceux de la maison peuvent servir en même temps.
 
 ---
 
@@ -169,7 +169,7 @@ modification : `sudo systemctl restart easytv`.
 | `save_interval` | `30` | Fréquence (s) de sauvegarde de la position (l'état est aussi sauvegardé à chaque zapping) |
 | `rescan_interval` | `30` | Fréquence (s) de détection des nouvelles vidéos |
 | `state_file` | `/var/lib/easytv/state.json` | Mémoire des positions |
-| `input` | `remote` | `remote` (télécommande) ou `keyboard` (clavier, sur PC) |
+| `input` | `remote` | `remote` (sur la Pi : on zappe par le téléphone) ou `keyboard` (clavier, sur PC) |
 | `mpv_args` | réglages Pi | Options du lecteur vidéo (décodage matériel, son HDMI) |
 | `web_port` | `80` | Port de la page web de télécommande (`0` la désactive) |
 | `video_extensions` | `.mp4 .mkv .avi .mov .m4v .webm .ts` | Extensions reconnues |
