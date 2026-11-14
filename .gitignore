@@ -12,3 +12,6 @@ build/
 state.json
 config.toml
 .claude/settings.local.json
+
+# Local test videos
+videos/
