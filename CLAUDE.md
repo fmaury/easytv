@@ -15,7 +15,8 @@ là où on l'a laissée.
    - après → même vidéo, depuis le début.
 4. **Lecture continue** : fin de vidéo → suivante ; après la dernière → retour à la première.
 5. **Dernière chaîne mémorisée** : au démarrage, la TV se rallume dessus (règle 3 appliquée).
-   L'état est sauvegardé toutes les 5 s ; après une coupure, l'heure de départ est celle de la
+   L'état est sauvegardé toutes les `save_interval` s (5 par défaut, 30 sur la Pi pour la carte SD)
+   et à chaque zapping ; après une coupure, l'heure de départ est celle de la
    dernière sauvegarde.
 6. **Contenu disparu** : vidéo mémorisée supprimée → la suivante dans l'ordre de tri ;
    chaîne supprimée → première chaîne.
@@ -106,6 +107,23 @@ des `script-message easytv <action>` sur la socket `/tmp/easytv-*/mpv.sock`.
 - Toute nouvelle logique arrive avec ses tests ; les tests ne nécessitent ni Pi ni TV.
 - Commentaires seulement là où le code n'est pas évident. Petits commits ciblés.
 
+## Installation sur la Pi
+
+- `install.sh` (idempotent, = commande de mise à jour après `git pull`) : paquets apt (mpv, git,
+  curl, v4l-utils), uv, `uv sync --no-dev --frozen`, `config.toml` depuis `config.example.toml`
+  (jamais écrasé ; son HDMI détecté : `vc4hdmi` sur Pi 3, `vc4hdmi0` sur Pi 4), `/media/tv`,
+  service systemd, démarrage sans bureau (`multi-user.target`).
+- `deploy/easytv.service` : modèle (`@USER@`, `@DIR@`), `Restart=always`, `StateDirectory=easytv`,
+  attente NTP (60 s max) avant le lancement.
+- `config.example.toml` est le modèle **Pi** : `mpv_args` (`--gpu-context=drm`, `--hwdec=v4l2m2m`,
+  `--ao=alsa` + périphérique HDMI : le service tourne hors session, sans PipeWire), `save_interval = 30`.
+- Relancer EasyTV sans sudo : envoyer `script-message easytv quit` sur la socket
+  `/tmp/easytv-*/mpv.sock` → systemd le relance (le code est installé en mode éditable : un
+  `git pull` suffit pour le code Python).
+- Capture de l'écran de la TV : `screenshot-to-file` sur la même socket (le fichier est écrit
+  en différé : attendre ~2 s).
+- `README.md` : guide utilisateur en français (carte SD → SSH → `install.sh` → vidéos par SFTP).
+
 ## Travail sur la Pi
 
 Toute commande sur la Pi (SSH, `sudo`, systemd, paquets) est annoncée et validée par l'utilisateur
@@ -118,8 +136,8 @@ avant exécution. Les procédures récurrentes deviennent des skills dans `.clau
 1. Logique pure + tests (config, library, state, tuner) ✅
 2. Lecteur mpv + clavier → TV fonctionnelle sur PC ✅
 3. Robustesse : vidéos illisibles (anti-boucle), logs, bandeau soigné ✅
-4. Installation sur la Pi (OS, mpv DRM, systemd, SFTP) + skills `/pi-setup`, `/deploy-pi` ← **en cours**
-5. CEC avec la TV TCL + skill `/cec-test`
+4. Installation sur la Pi : `install.sh`, service systemd, README ✅
+5. Télécommande : evdev + CEC avec la TV TCL + skill `/cec-test` ← **en cours**
 6. Bonus : effet neige, liste des chaînes sur OK, page web de télécommande, Samba
 
 Mettre à jour la phase en cours à chaque étape terminée.

@@ -53,6 +53,14 @@ if [[ -f "$DIR/config.toml" ]]; then
 else
     cp "$DIR/config.example.toml" "$DIR/config.toml"
     info "config.toml créé à partir de config.example.toml."
+    # The HDMI sound card is "vc4hdmi" on a Pi 3 but "vc4hdmi0" on a Pi 4.
+    hdmi_audio="$(aplay -L 2>/dev/null | grep -m1 '^hdmi:CARD=vc4hdmi' || true)"
+    if [[ -n "$hdmi_audio" ]]; then
+        sed -i "s|alsa/hdmi:CARD=vc4hdmi,DEV=0|alsa/$hdmi_audio|" "$DIR/config.toml"
+        info "Son HDMI : $hdmi_audio"
+    else
+        info "Attention : pas de sortie son HDMI détectée, à régler dans config.toml (mpv_args)."
+    fi
 fi
 
 # --- 6. Dossier des chaînes ---------------------------------------------------
