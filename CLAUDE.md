@@ -1,6 +1,6 @@
 # EasyTV
 
-« TV perso » sur Raspberry Pi 4 branchée en HDMI sur une TV : chaque dossier est une chaîne, chaque
+« TV perso » sur Raspberry Pi 3 Model B branchée en HDMI sur une TV : chaque dossier est une chaîne, chaque
 chaîne est une playlist de vidéos, on zappe avec la télécommande de la TV et chaque chaîne reprend
 là où on l'a laissée.
 
@@ -46,8 +46,8 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
 
 ## Stack
 
-- **Cible** : Raspberry Pi 4, Raspberry Pi OS Lite 64 bits (sans bureau), service **systemd**.
-- **Lecteur** : mpv plein écran en DRM (sans X/Wayland), décodage matériel H.264/HEVC,
+- **Cible** : Raspberry Pi 3 Model B (1 Go de RAM), Raspberry Pi OS Lite 64 bits (sans bureau), service **systemd**.
+- **Lecteur** : mpv plein écran en DRM (sans X/Wayland), décodage matériel H.264,
   bandeau de zapping via l'OSD mpv.
 - **Télécommande** : HDMI-CEC via le pilote noyau (`/dev/cec0`), touches exposées comme
   périphérique d'entrée et lues avec `evdev`.
@@ -58,12 +58,15 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
 
 ## Contraintes matérielles
 
-- TV branchée sur le port **HDMI 0** de la Pi 4 (le plus proche de l'USB-C) : seul port CEC fiable.
+- Un seul port HDMI (taille normale), qui gère le CEC.
 - TV **TCL** : CEC = « T-Link » / « Contrôle HDMI ». Flèches, OK, Retour normalement transmis ;
   CH+/CH− et chiffres souvent non → zapping principal sur ↑/↓.
   Vérifier les touches reçues : `cec-ctl -d /dev/cec0 --playback -M`.
-- Décodage matériel Pi 4 : H.264 et HEVC uniquement. Pas de conversion automatique dans l'app :
-  les vidéos sont fournies dans un format compatible.
+- Décodage matériel Pi 3 : **H.264 uniquement** (1080p max, 720p conseillé). Pas de HEVC matériel :
+  HEVC, VP9, AV1 saccadent. Pas de conversion automatique dans l'app : les vidéos sont fournies
+  en H.264. Performances de lecture à valider tôt sur la vraie Pi.
+- USB 2.0 uniquement ; système sur carte SD (le démarrage USB du 3 B demande une activation préalable).
+- 1 Go de RAM, pas d'horloge matérielle (heure fausse au boot tant que NTP n'a pas synchronisé).
 
 ## Commandes
 
