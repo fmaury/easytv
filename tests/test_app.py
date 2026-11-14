@@ -9,7 +9,9 @@ from easytv.app import NO_CHANNEL_TEXT, UNAVAILABLE_TEXT, App, StopReason
 from easytv.banner import message_banner
 from easytv.config import Config
 from easytv.player import Closed, EndOfFile, Message, PlayerEvent, VideoError
+from easytv.remote import Action, Command
 from easytv.state import ChannelState, TvState, load_state, save_state
+from easytv.web import Status
 
 T0 = 1_000_000.0
 
@@ -211,6 +213,26 @@ def test_info_shows_banner(env: Env) -> None:
     assert len(env.player.banners) == 2
 
 
+def test_submitted_command_is_executed_and_status_follows(env: Env) -> None:
+    async def scenario(app: App) -> None:
+        assert app.status() == Status(["Cartoons", "Docs"], 1, "ep1", unavailable=False)
+        app.submit(Command(Action.GOTO, 2))
+        await env.send(Message(("easytv", "info")))  # let the app run
+        assert app.status() == Status(["Cartoons", "Docs"], 2, "doc1", unavailable=False)
+
+    env.run(scenario)
+    assert [p for p, _ in env.player.played] == ["1 - Cartoons/ep1.mp4", "2 - Docs/doc1.mp4"]
+
+
+def test_status_without_channels(env: Env, tmp_path: Path) -> None:
+    env.config = Config(channels_dir=tmp_path / "empty", state_file=tmp_path / "s.json")
+
+    async def scenario(app: App) -> None:
+        assert app.status() == Status([], None, None, unavailable=False)
+
+    env.run(scenario)
+
+
 # --- Unreadable videos -------------------------------------------------------
 
 
@@ -241,6 +263,7 @@ def test_fully_broken_channel_stops_instead_of_looping(env: Env) -> None:
     async def scenario(app: App) -> None:
         await env.send(VideoError("broken"))
         await env.send(EndOfFile())  # ended instantly, never played
+        assert app.status().unavailable
 
     env.run(scenario)
     assert [p for p, _ in env.player.played] == ["1 - Cartoons/ep1.mp4", "1 - Cartoons/ep2.mp4"]

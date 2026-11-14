@@ -4,13 +4,14 @@ import time
 from collections.abc import Awaitable, Callable
 from enum import Enum
 
-from easytv.banner import channel_banner, message_banner
+from easytv.banner import channel_banner, display_name, message_banner, video_title
 from easytv.config import Config
 from easytv.library import Channel, scan
 from easytv.player import Closed, EndOfFile, Message, Player, PlayerEvent, VideoError
 from easytv.remote import Action, Command, parse_message
 from easytv.state import load_state, save_state
 from easytv.tuner import Playback, Tuner
+from easytv.web import Status
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,22 @@ class App:
                 timer.cancel()
             await asyncio.gather(*timers, return_exceptions=True)
             await self.save()
+
+    def submit(self, command: Command) -> None:
+        """Queue a command from another source (web remote), handled like a remote key."""
+        self._player.events.put_nowait(Message(command.message_args()))
+
+    def status(self) -> Status:
+        channels = self._tuner.channels
+        current = self._tuner.current
+        if current is None:
+            return Status([display_name(c.name) for c in channels], None, None, unavailable=False)
+        return Status(
+            channels=[display_name(c.name) for c in channels],
+            current=channels.index(current) + 1,
+            video=video_title(self._tuner.state.channels[current.name].video),
+            unavailable=self._unavailable is not None,
+        )
 
     async def save(self) -> None:
         position = self._player.position

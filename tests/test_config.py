@@ -23,6 +23,7 @@ def test_full_config(tmp_path: Path) -> None:
         video_extensions = [".MP4", "mkv"]
         input = "keyboard"
         mpv_args = ["--hwdec=v4l2m2m", "--ao=alsa"]
+        web_port = 0
         """,
     )
     config = load_config(path)
@@ -34,6 +35,7 @@ def test_full_config(tmp_path: Path) -> None:
     assert config.video_extensions == {".mp4", ".mkv"}
     assert config.input is InputMode.KEYBOARD
     assert config.mpv_args == ("--hwdec=v4l2m2m", "--ao=alsa")
+    assert config.web_port == 0
 
 
 def test_defaults(tmp_path: Path) -> None:
@@ -45,6 +47,7 @@ def test_defaults(tmp_path: Path) -> None:
     assert config.video_extensions == DEFAULT_VIDEO_EXTENSIONS
     assert config.input is InputMode.REMOTE
     assert config.mpv_args == ()
+    assert config.web_port == 8080
 
 
 def test_home_is_expanded(tmp_path: Path) -> None:
@@ -102,4 +105,11 @@ def test_example_config_is_valid() -> None:
 def test_invalid_mpv_args(tmp_path: Path, value: str) -> None:
     path = write(tmp_path, f'channels_dir = "/tv"\nstate_file = "/s.json"\nmpv_args = {value}\n')
     with pytest.raises(ConfigError, match="mpv_args"):
+        load_config(path)
+
+
+@pytest.mark.parametrize("value", ['"8080"', "-1", "65536", "80.5", "true"])
+def test_invalid_web_port(tmp_path: Path, value: str) -> None:
+    path = write(tmp_path, f'channels_dir = "/tv"\nstate_file = "/s.json"\nweb_port = {value}\n')
+    with pytest.raises(ConfigError, match="web_port"):
         load_config(path)

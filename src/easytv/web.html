@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111214">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EasyTV">
+<title>EasyTV</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23111214'/%3E%3Crect x='16' y='26' width='68' height='46' rx='8' fill='none' stroke='%23ffd700' stroke-width='7'/%3E%3Cpath d='M38 84h24' stroke='%23ffd700' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #111214;
+    --panel: #1c1d21;
+    --button: #26282d;
+    --button-active: #34373e;
+    --text: #f2f2f3;
+    --muted: #9a9ca3;
+    --accent: #ffd700;
+    --accent-text: #111214;
+    --danger: #ff6b5e;
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body {
+    font: 17px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+             max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    max-width: 520px;
+    margin: 0 auto;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  button {
+    font: inherit;
+    color: inherit;
+    border: 0;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  .now {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--panel);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    min-height: 92px;
+  }
+  .now .number {
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--accent);
+    min-width: 1.2em;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .now .name { font-size: 22px; font-weight: 700; }
+  .now .video { color: var(--muted); margin-top: 2px; }
+  .now .video.warning { color: var(--danger); }
+  .now .text { min-width: 0; }
+  .now .name, .now .video { overflow-wrap: anywhere; }
+
+  .offline {
+    margin: 12px 0 0;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--danger) 18%, transparent);
+    color: var(--danger);
+  }
+
+  .pad {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .pad button {
+    background: var(--button);
+    border-radius: var(--radius);
+    min-height: 88px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-weight: 600;
+    transition: transform 80ms ease, background 80ms ease;
+  }
+  .pad button .icon { font-size: 30px; line-height: 1; }
+  .pad button.zap { background: var(--accent); color: var(--accent-text); min-height: 110px; }
+  .pad button:active { transform: scale(0.96); background: var(--button-active); }
+  .pad button.zap:active { background: color-mix(in srgb, var(--accent) 80%, white); }
+
+  h2 {
+    font-size: 15px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin: 28px 4px 10px;
+  }
+  .channels { display: flex; flex-direction: column; gap: 8px; }
+  .channels button {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    text-align: left;
+    background: var(--panel);
+    border-radius: 14px;
+    padding: 14px 16px;
+    min-height: 56px;
+    transition: background 80ms ease;
+  }
+  .channels button:active { background: var(--button-active); }
+  .channels .number {
+    font-weight: 800;
+    color: var(--accent);
+    min-width: 1.6em;
+    font-variant-numeric: tabular-nums;
+  }
+  .channels .label { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .channels button.current { outline: 2px solid var(--accent); }
+  .channels .live {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent-text);
+    background: var(--accent);
+    border-radius: 999px;
+    padding: 2px 9px;
+  }
+  .empty { color: var(--muted); padding: 4px; }
+</style>
+</head>
+<body>
+  <section class="now" aria-live="polite">
+    <div class="number" id="number">–</div>
+    <div class="text">
+      <div class="name" id="name">Connexion…</div>
+      <div class="video" id="video"></div>
+    </div>
+  </section>
+  <p class="offline" id="offline" hidden>La TV ne répond pas. Le téléphone est-il sur le Wi-Fi de la maison ?</p>
+
+  <section class="pad">
+    <button class="zap" data-action="prev_channel" aria-label="Chaîne précédente">
+      <span class="icon">▼</span>Chaîne −
+    </button>
+    <button class="zap" data-action="next_channel" aria-label="Chaîne suivante">
+      <span class="icon">▲</span>Chaîne +
+    </button>
+    <button data-action="next_video"><span class="icon">⏭</span>Vidéo suivante</button>
+    <button data-action="info"><span class="icon">ℹ</span>Infos sur la TV</button>
+  </section>
+
+  <h2>Chaînes</h2>
+  <div class="channels" id="channels"></div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let shown = null;
+
+  function render(status) {
+    const key = JSON.stringify(status);
+    if (key === shown) return;
+    shown = key;
+
+    const video = $("video");
+    if (status.current === null) {
+      $("number").textContent = "–";
+      $("name").textContent = "Aucune chaîne";
+      video.textContent = "";
+    } else {
+      $("number").textContent = status.current;
+      $("name").textContent = status.channels[status.current - 1];
+      video.textContent = status.unavailable ? "Chaîne indisponible" : status.video;
+    }
+    video.classList.toggle("warning", status.unavailable);
+
+    const list = $("channels");
+    if (status.channels.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = "Aucune chaîne : ajoute des dossiers de vidéos sur la Pi.";
+      list.replaceChildren(empty);
+      return;
+    }
+    list.replaceChildren(...status.channels.map((name, i) => {
+      const number = i + 1;
+      const button = document.createElement("button");
+      const current = number === status.current;
+      button.className = current ? "current" : "";
+      const num = document.createElement("span");
+      num.className = "number";
+      num.textContent = number;
+      const label = document.createElement("span");
+      label.className = "label";
+      label.textContent = name;
+      button.append(num, label);
+      if (current) {
+        const live = document.createElement("span");
+        live.className = "live";
+        live.textContent = "En cours";
+        button.append(live);
+      }
+      button.addEventListener("click", () => send({ action: "goto", number }));
+      return button;
+    }));
+  }
+
+  function setOnline(online) {
+    $("offline").hidden = online;
+  }
+
+  async function refresh() {
+    try {
+      const response = await fetch("/api/status", { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      render(await response.json());
+      setOnline(true);
+    } catch (error) {
+      setOnline(false);
+    }
+  }
+
+  async function send(command) {
+    if (navigator.vibrate) navigator.vibrate(15);
+    try {
+      const response = await fetch("/api/command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(command),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      setOnline(true);
+    } catch (error) {
+      setOnline(false);
+    }
+    // The TV switches asynchronously: look again shortly after.
+    setTimeout(refresh, 300);
+    setTimeout(refresh, 1200);
+  }
+
+  document.querySelectorAll("[data-action]").forEach((button) => {
+    button.addEventListener("click", () => send({ action: button.dataset.action }));
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") refresh();
+  });
+  setInterval(() => {
+    if (document.visibilityState === "visible") refresh();
+  }, 3000);
+  refresh();
+</script>
+</body>
+</html>

@@ -26,6 +26,7 @@ class Config:
     video_extensions: frozenset[str] = DEFAULT_VIDEO_EXTENSIONS
     input: InputMode = InputMode.REMOTE
     mpv_args: tuple[str, ...] = ()
+    web_port: int = 8080  # web remote for phones; 0 disables it
 
 
 def load_config(path: Path) -> Config:
@@ -47,6 +48,7 @@ def load_config(path: Path) -> Config:
         video_extensions=_extensions(data, defaults.video_extensions),
         input=_input_mode(data, defaults.input),
         mpv_args=_mpv_args(data),
+        web_port=_port(data, "web_port", defaults.web_port),
     )
 
 
@@ -74,6 +76,13 @@ def _extensions(data: dict[str, Any], default: frozenset[str]) -> frozenset[str]
     if not isinstance(value, list) or not all(isinstance(v, str) and v for v in value):
         raise ConfigError("video_extensions must be a list of strings")
     return frozenset(v.lower() if v.startswith(".") else f".{v.lower()}" for v in value)
+
+
+def _port(data: dict[str, Any], key: str, default: int) -> int:
+    value = data.get(key, default)
+    if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 65535:
+        raise ConfigError(f"{key} must be a port number (1-65535), or 0 to disable")
+    return value
 
 
 def _input_mode(data: dict[str, Any], default: InputMode) -> InputMode:

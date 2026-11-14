@@ -8,8 +8,11 @@ Transforme une Raspberry Pi branchée sur ta TV en **chaînes de télé perso** 
   repart du début) ;
 - au démarrage, la TV se rallume sur la dernière chaîne regardée.
 
-> ⚠️ **Télécommande en cours de développement** : pour l'instant la TV tourne et enchaîne les vidéos,
-> mais le zapping avec la télécommande de la TV (HDMI-CEC) arrive dans une prochaine version.
+On zappe **depuis son téléphone** : une page web, sur le Wi-Fi de la maison, avec les boutons et la
+liste des chaînes ([voir plus bas](#5-zapper-avec-le-téléphone)).
+
+> ⚠️ **Télécommande de la TV** : selon les modèles, la TV ne transmet pas ses touches à la Pi
+> (c'est le cas des TCL testées). Une télécommande dédiée est à l'étude.
 
 ---
 
@@ -125,7 +128,30 @@ Si une vidéo saccade, convertis-la **sur ton PC** (bien plus rapide que la Pi) 
 ffmpeg -i entree.mkv -c:v libx264 -preset medium -crf 21 -vf "scale='min(1920,iw)':-2" -c:a aac sortie.mp4
 ```
 
-## 5. Configuration
+## 5. Zapper avec le téléphone
+
+Sur un téléphone connecté au **Wi-Fi de la maison**, ouvre dans le navigateur :
+
+**`http://easytv.local:8080`**
+
+Si la page ne s'ouvre pas, utilise l'adresse IP de la Pi à la place, par exemple
+`http://192.168.1.31:8080`. EasyTV l'affiche au démarrage dans son journal
+(`journalctl -u easytv | grep "web remote"`), ou `hostname -I` sur la Pi la donne.
+
+La page affiche la chaîne en cours et permet de :
+
+- passer à la **chaîne suivante ou précédente** ;
+- aller **directement à une chaîne** en la touchant dans la liste ;
+- passer à la **vidéo suivante** ;
+- réafficher le **bandeau d'infos** sur la TV.
+
+**Astuce** : ajoute la page à l'écran d'accueil (menu du navigateur → « Ajouter à l'écran
+d'accueil ») pour l'ouvrir comme une application.
+
+Tous les téléphones de la maison peuvent s'en servir, sans rien installer. La page n'est pas
+accessible depuis Internet, seulement depuis le réseau de la maison.
+
+## 6. Configuration
 
 Le fichier `~/easytv/config.toml` est créé à l'installation (jamais écrasé ensuite). Après une
 modification : `sudo systemctl restart easytv`.
@@ -139,15 +165,16 @@ modification : `sudo systemctl restart easytv`.
 | `state_file` | `/var/lib/easytv/state.json` | Mémoire des positions |
 | `input` | `remote` | `remote` (télécommande) ou `keyboard` (clavier, sur PC) |
 | `mpv_args` | réglages Pi | Options du lecteur vidéo (décodage matériel, son HDMI) |
+| `web_port` | `8080` | Port de la page web de télécommande (`0` la désactive) |
 | `video_extensions` | `.mp4 .mkv .avi .mov .m4v .webm .ts` | Extensions reconnues |
 
-## 6. Mettre à jour
+## 7. Mettre à jour
 
 ```bash
 cd ~/easytv && git pull && ./install.sh
 ```
 
-## 7. En cas de problème
+## 8. En cas de problème
 
 | Besoin | Commande |
 |---|---|

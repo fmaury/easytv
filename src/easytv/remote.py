@@ -22,6 +22,11 @@ class Command:
     action: Action
     number: int | None = None  # channel number for GOTO (1-based)
 
+    def message_args(self) -> tuple[str, ...]:
+        """The script message for this command: the inverse of `parse_message`."""
+        number = () if self.number is None else (str(self.number),)
+        return (MESSAGE_PREFIX, self.action.value, *number)
+
 
 def parse_message(args: Sequence[str]) -> Command | None:
     """Turn an mpv script message such as ("easytv", "goto", "2") into a command."""

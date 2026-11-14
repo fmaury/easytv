@@ -36,6 +36,13 @@ def test_invalid_commands(args: tuple[str, ...]) -> None:
     assert parse_message(args) is None
 
 
+@pytest.mark.parametrize(
+    "command", [Command(a) for a in Action if a is not Action.GOTO] + [Command(Action.GOTO, 12)]
+)
+def test_message_args_round_trip(command: Command) -> None:
+    assert parse_message(command.message_args()) == command
+
+
 def test_every_key_binding_is_a_valid_command() -> None:
     for line in KEY_BINDINGS.splitlines():
         key, command, *args = line.split()

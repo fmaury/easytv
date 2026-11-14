@@ -8,6 +8,7 @@ from pathlib import Path
 from easytv.app import App, StopReason
 from easytv.config import Config, ConfigError, InputMode, load_config
 from easytv.player import MpvError, MpvPlayer
+from easytv.web import WebRemote
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +50,8 @@ async def _run(config: Config, *, fullscreen: bool) -> StopReason:
     assert main_task is not None
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, main_task.cancel)
 
-    if config.input is InputMode.REMOTE:
-        logger.warning("remote control is not available yet: zapping is disabled")
+    if config.input is InputMode.REMOTE and not config.web_port:
+        logger.warning("remote control is not available yet and web_port = 0: no way to zap")
     player = MpvPlayer(
         keyboard=config.input is InputMode.KEYBOARD,
         fullscreen=fullscreen,
@@ -58,7 +59,18 @@ async def _run(config: Config, *, fullscreen: bool) -> StopReason:
     )
     await player.start()
     try:
-        return await App(config, player).run()
+        app = App(config, player)
+        web = WebRemote(app.status, app.submit)
+        if config.web_port:
+            try:
+                await web.start(config.web_port)
+            except OSError as e:
+                # The TV must keep working even if the web remote cannot start.
+                logger.error("web remote disabled: port %d: %s", config.web_port, e)
+        try:
+            return await app.run()
+        finally:
+            await web.close()
     finally:
         await player.close()
 
