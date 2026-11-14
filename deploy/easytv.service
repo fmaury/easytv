@@ -1,0 +1,19 @@
+# Template rendered by install.sh: @USER@ and @DIR@ are replaced.
+[Unit]
+Description=EasyTV
+After=systemd-timesyncd.service
+
+[Service]
+User=@USER@
+SupplementaryGroups=video render audio input
+WorkingDirectory=@DIR@
+# No hardware clock on the Pi: wait (60 s max) for NTP so that the 1 h resume rule uses the real time.
+ExecStartPre=-/usr/bin/timeout 60 /usr/lib/systemd/systemd-time-wait-sync
+ExecStart=@DIR@/.venv/bin/easytv --config @DIR@/config.toml --fullscreen
+StateDirectory=easytv
+# A TV must always come back, even after a clean exit.
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
