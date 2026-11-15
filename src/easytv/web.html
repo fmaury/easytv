@@ -306,6 +306,8 @@
   let shown = null;
 
   // Progress of the current video: known at each poll, moved forward every second in between.
+  // "loading": a placeholder while a video starts, so the panel does not jump; "idle": TV off,
+  // the space is kept but nothing shown; null: no channel at all.
   let progress = null;
 
   function clock(seconds) {
@@ -318,8 +320,13 @@
 
   function showProgress() {
     const box = $("progress");
-    if (!progress) {
-      box.hidden = true;
+    box.hidden = progress === null;
+    box.style.visibility = progress === "idle" ? "hidden" : "visible";
+    if (progress === null || progress === "idle") return;
+    if (progress === "loading") {
+      $("bar").style.width = "0%";
+      $("elapsed").textContent = "–:––";
+      $("total").textContent = "–:––";
       return;
     }
     const elapsed = (Date.now() - progress.at) / 1000;
@@ -331,8 +338,15 @@
   }
 
   function render(status) {
-    const known = status.position !== null && status.duration;
-    progress = known ? { position: status.position, duration: status.duration, at: Date.now() } : null;
+    if (status.current === null) {
+      progress = null;
+    } else if (status.stopped || status.unavailable) {
+      progress = "idle";
+    } else if (status.position !== null && status.duration) {
+      progress = { position: status.position, duration: status.duration, at: Date.now() };
+    } else {
+      progress = "loading";
+    }
     showProgress();
     const key = JSON.stringify({ ...status, position: null });
     if (key === shown) return;
@@ -397,8 +411,11 @@
     }));
   }
 
+  let failures = 0;
   function setOnline(online) {
-    $("offline").hidden = online;
+    // Wi-Fi drops a request now and then: only warn when it keeps failing.
+    failures = online ? 0 : failures + 1;
+    $("offline").hidden = failures < 2;
   }
 
   async function refresh() {
