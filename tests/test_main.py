@@ -27,6 +27,7 @@ class ClosingPlayer:
     def __init__(self, **_: Any) -> None:
         self.events: asyncio.Queue[PlayerEvent] = asyncio.Queue()
         self.position: float | None = None
+        self.duration: float | None = None
         self.has_started = False
 
     async def start(self) -> None:

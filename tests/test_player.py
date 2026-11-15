@@ -91,6 +91,18 @@ def test_has_started_once_the_video_really_plays(video: Path) -> None:
     run(scenario)
 
 
+def test_duration_of_the_current_video(video: Path) -> None:
+    async def scenario(player: MpvPlayer) -> None:
+        await player.play(video, start=0)
+        while player.duration is None:
+            await asyncio.sleep(0.05)
+        assert abs(player.duration - 3.0) < 0.1
+        await player.stop()
+        assert player.duration is None
+
+    run(scenario)
+
+
 def test_unreadable_file_never_starts(tmp_path: Path) -> None:
     fake = tmp_path / "fake.mp4"
     fake.write_text("this is not a video", encoding="utf-8")

@@ -5,12 +5,18 @@ from collections.abc import Awaitable, Callable
 from enum import Enum
 
 from easytv.banner import (
+    BEDTIME_SUBTITLE,
+    BEDTIME_TITLE,
+    SLEEP_SUBTITLE,
+    SLEEP_TITLE,
     channel_banner,
     display_name,
     message_banner,
+    sleep_screen,
     video_title,
     volume_banner,
 )
+from easytv.bedtime import bedtime_reached
 from easytv.config import Config
 from easytv.library import Channel, scan
 from easytv.player import Closed, EndOfFile, Layer, Message, Player, PlayerEvent, VideoError
@@ -25,9 +31,9 @@ BANNER_SECONDS = 4.0
 VOLUME_SECONDS = 2.5
 VOLUME_STEP = 5
 AUDIO_CHECK_SECONDS = 10.0
+BEDTIME_CHECK_SECONDS = 15.0
 NO_CHANNEL_TEXT = "Aucune chaîne"
 UNAVAILABLE_TEXT = "Chaîne indisponible"
-STOPPED_TEXT = "Arrêt"
 
 
 class StopReason(Enum):
@@ -45,6 +51,8 @@ class App:
         self._tuner = Tuner(self._scan(), load_state(config.state_file), config.resume_timeout)
         self._failures = 0  # consecutive unreadable videos on the current channel
         self._unavailable: tuple[str, ...] | None = None  # videos of a fully broken channel
+        self._sleep = (SLEEP_TITLE, SLEEP_SUBTITLE)  # message on the TV while it is "off"
+        self._last_tick = clock()  # time of the previous bedtime check
 
     async def run(self) -> StopReason:
         logger.info(
@@ -56,6 +64,7 @@ class App:
             asyncio.create_task(self._every(self._config.save_interval, self.save)),
             asyncio.create_task(self._every(self._config.rescan_interval, self.rescan)),
             asyncio.create_task(self._every(AUDIO_CHECK_SECONDS, self._player.check_audio)),
+            asyncio.create_task(self._every(BEDTIME_CHECK_SECONDS, self.check_bedtime)),
         ]
         try:
             while True:
@@ -77,6 +86,7 @@ class App:
         channels = self._tuner.channels
         current = self._tuner.current
         state = self._tuner.state
+        playing = not self._tuner.stopped and self._unavailable is None
         return Status(
             channels=[display_name(c.name) for c in channels],
             current=None if current is None else channels.index(current) + 1,
@@ -85,6 +95,9 @@ class App:
             volume=state.volume,
             muted=state.muted,
             stopped=self._tuner.stopped,
+            position=self._player.position if playing else None,
+            duration=self._player.duration if playing else None,
+            sleep_text=self._sleep[0] if self._tuner.stopped else None,
         )
 
     async def save(self) -> None:
@@ -178,6 +191,8 @@ class App:
                 playback = self._tuner.goto(command.number, now)
             case Action.NEXT_VIDEO:
                 playback = self._tuner.next_video(now)
+            case Action.PREV_VIDEO:
+                playback = self._tuner.prev_video(now)
             case Action.PLAY if self._tuner.stopped:
                 logger.info("playing again")
                 playback = self._tuner.resume(now)
@@ -186,17 +201,29 @@ class App:
             case _:
                 return None
         if playback is not None:
-            await self._show(playback, reset=command.action is not Action.NEXT_VIDEO)
+            same_channel = command.action in (Action.NEXT_VIDEO, Action.PREV_VIDEO)
+            await self._show(playback, reset=not same_channel)
             await self.save()
         return None
 
-    async def _stop(self) -> None:
+    async def check_bedtime(self) -> None:
+        """Put the TV to sleep when bedtime comes (it can be turned on again afterwards)."""
+        now = self._clock()
+        previous, self._last_tick = self._last_tick, now
+        bedtime = self._config.bedtime
+        if bedtime is None or self._tuner.stopped or not bedtime_reached(previous, now, bedtime):
+            return
+        logger.info("bedtime (%s): the TV goes to sleep", bedtime.strftime("%H:%M"))
+        await self._stop(BEDTIME_TITLE, BEDTIME_SUBTITLE)
+
+    async def _stop(self, title: str = SLEEP_TITLE, subtitle: str = SLEEP_SUBTITLE) -> None:
         if self._tuner.stopped:
             return
+        self._sleep = (title, subtitle)
         self._tuner.stop(self._player.position, self._clock())
         logger.info("stopped")
         await self._player.stop()
-        await self._player.show_banner(message_banner(STOPPED_TEXT), BANNER_SECONDS)
+        await self._banner()
         await self.save()
 
     async def _apply_volume(self) -> None:
@@ -238,6 +265,9 @@ class App:
             await self._banner()
 
     async def _banner(self) -> None:
+        if self._tuner.stopped:
+            await self._player.show_banner(sleep_screen(*self._sleep), None)  # until "on"
+            return
         channel = self._tuner.current
         if channel is None:
             await self._player.show_banner(message_banner(NO_CHANNEL_TEXT), None)

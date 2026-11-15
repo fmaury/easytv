@@ -39,6 +39,7 @@ def body(response: Response) -> object:
         ({"action": "next_channel"}, Command(Action.NEXT_CHANNEL)),
         ({"action": "prev_channel"}, Command(Action.PREV_CHANNEL)),
         ({"action": "next_video"}, Command(Action.NEXT_VIDEO)),
+        ({"action": "prev_video"}, Command(Action.PREV_VIDEO)),
         ({"action": "info"}, Command(Action.INFO)),
         ({"action": "volume_up"}, Command(Action.VOLUME_UP)),
         ({"action": "volume_down"}, Command(Action.VOLUME_DOWN)),
@@ -97,6 +98,9 @@ def test_status(web: WebRemote) -> None:
         "volume": 60,
         "muted": False,
         "stopped": False,
+        "position": None,
+        "duration": None,
+        "sleep_text": None,
     }
 
 

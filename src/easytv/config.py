@@ -1,5 +1,6 @@
 import tomllib
 from dataclasses import dataclass
+from datetime import time
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,7 @@ class Config:
     input: InputMode = InputMode.REMOTE
     mpv_args: tuple[str, ...] = ()
     web_port: int = 8080  # web remote for phones; 0 disables it
+    bedtime: time | None = None  # the TV goes to sleep every day at this time
 
 
 def load_config(path: Path) -> Config:
@@ -49,6 +51,7 @@ def load_config(path: Path) -> Config:
         input=_input_mode(data, defaults.input),
         mpv_args=_mpv_args(data),
         web_port=_port(data, "web_port", defaults.web_port),
+        bedtime=_bedtime(data),
     )
 
 
@@ -99,3 +102,17 @@ def _mpv_args(data: dict[str, Any]) -> tuple[str, ...]:
     if not isinstance(value, list) or not all(isinstance(v, str) and v for v in value):
         raise ConfigError("mpv_args must be a list of strings")
     return tuple(value)
+
+
+def _bedtime(data: dict[str, Any]) -> time | None:
+    value = data.get("bedtime", "")
+    if isinstance(value, time):  # TOML local time: bedtime = 20:30:00
+        return value
+    if isinstance(value, str):
+        if not value:
+            return None
+        try:
+            return time.fromisoformat(value)
+        except ValueError:
+            pass
+    raise ConfigError('bedtime must be a time such as "20:30", or "" to disable it')

@@ -23,6 +23,11 @@ resume_timeout = 3600  # 1 h
 # 80 est autorisé par le service systemd (CAP_NET_BIND_SERVICE). Sur un PC : 8080.
 web_port = 80
 
+# Heure du coucher : chaque jour à cette heure, la TV s'éteint toute seule et affiche
+# « Il est temps de dormir ». On peut la rallumer ensuite depuis le téléphone.
+# "" pour désactiver.
+bedtime = "00:00"
+
 # Fréquence de sauvegarde de l'état (en secondes). 30 s ménage la carte SD ; l'état est de toute
 # façon sauvegardé immédiatement à chaque zapping et à l'arrêt.
 save_interval = 30

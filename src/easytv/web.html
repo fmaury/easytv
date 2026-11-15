@@ -21,6 +21,9 @@
     --accent: #ffd700;
     --accent-text: #111214;
     --danger: #ff6b5e;
+    --line: #2c2e34;
+    --sleep: #e07f7f;
+    --wake: #6ec58a;
     --radius: 18px;
   }
   * { box-sizing: border-box; }
@@ -63,7 +66,23 @@
   .now .name { font-size: 22px; font-weight: 700; }
   .now .video { color: var(--muted); margin-top: 2px; }
   .now .video.warning { color: var(--danger); }
-  .now .text { min-width: 0; }
+  .now .text { min-width: 0; flex: 1; }
+  .progress { margin-top: 10px; }
+  .progress .bar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--button-active);
+    overflow: hidden;
+  }
+  .progress .bar > div { height: 100%; width: 0; background: var(--accent); }
+  .progress .times {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
   .now .name, .now .video { overflow-wrap: anywhere; }
 
   .offline {
@@ -101,6 +120,40 @@
   .remote button.zap:active, .remote button.play:active {
     background: color-mix(in srgb, var(--accent) 80%, white);
   }
+  /* Sections apart: a thin line and more space; sound and channels columns further apart. */
+  .remote.main {
+    column-gap: 24px;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+  }
+  .remote .title {
+    font-size: 15px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    text-align: center;
+  }
+  .remote button.sign { min-height: 84px; font-size: 48px; font-weight: 700; line-height: 1; }
+  .remote button.sign.zap { font-size: 38px; }
+  .remote button.emoji { font-size: 38px; line-height: 1; }
+  /* The "off" button: a soft pastel red; it turns yellow ("on") once the TV sleeps. */
+  .remote button#power { background: var(--sleep); }
+  .remote button#power:active { background: color-mix(in srgb, var(--sleep) 80%, white); }
+  .remote button#power.play { background: var(--wake); }
+  .remote button#power.play:active { background: color-mix(in srgb, var(--wake) 80%, white); }
+  .letter-i {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border: 3px solid currentColor;
+    border-radius: 50%;
+    font: 700 26px/1 Georgia, "Times New Roman", serif;
+  }
+  .remote .split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .remote .split .caption { font-size: 13px; }
   .remote .level { font-size: 13px; font-weight: 500; color: var(--muted); }
   .remote button.muted { outline: 2px solid var(--danger); }
   .remote button.muted .level { color: var(--danger); }
@@ -120,7 +173,9 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--muted);
-    margin: 28px 4px 10px;
+    margin: 24px 0 12px;
+    padding: 24px 4px 0;
+    border-top: 1px solid var(--line);
   }
   .channels { display: flex; flex-direction: column; gap: 8px; }
   .channels button {
@@ -161,38 +216,42 @@
     <div class="text">
       <div class="name" id="name">Connexion…</div>
       <div class="video" id="video"></div>
+      <div class="progress" id="progress" hidden>
+        <div class="bar"><div id="bar"></div></div>
+        <div class="times"><span id="elapsed"></span><span id="total"></span></div>
+      </div>
     </div>
   </section>
   <p class="offline" id="offline" hidden>La TV ne répond pas. Le téléphone est-il sur le Wi-Fi de la maison ?</p>
 
   <section class="remote">
-    <button data-action="volume_up" aria-label="Monter le son">
-      <span class="icon">🔊</span>Son +
-    </button>
-    <button class="zap" data-action="next_channel" aria-label="Chaîne suivante">
-      <span class="icon">▲</span>Chaîne +
-    </button>
+    <button class="small" data-action="info" aria-label="Infos sur la TV"><span class="letter-i">i</span></button>
+    <button class="small emoji" data-action="stop" id="power" aria-label="Éteindre">😴</button>
+  </section>
+
+  <section class="remote main">
+    <div class="title">Son</div>
+    <div class="title">Chaîne</div>
+
+    <button class="sign" data-action="volume_up" aria-label="Monter le son">+</button>
+    <button class="sign zap" data-action="next_channel" aria-label="Chaîne suivante">▲</button>
 
     <button class="small" data-action="mute" id="mute" aria-label="Couper ou remettre le son">
       <span><span id="mute-icon">🔇</span> <span id="mute-label">Couper</span></span>
       <span class="level" id="level">–</span>
       <span class="gauge"><div id="gauge"></div></span>
     </button>
-    <button class="small" data-action="info"><span class="icon">ℹ</span>Infos sur la TV</button>
+    <div class="split" aria-label="Vidéos">
+      <button class="small" data-action="prev_video" aria-label="Vidéo précédente">
+        <span class="icon">⏮</span><span class="caption">Précédente</span>
+      </button>
+      <button class="small" data-action="next_video" aria-label="Vidéo suivante">
+        <span class="icon">⏭</span><span class="caption">Suivante</span>
+      </button>
+    </div>
 
-    <button data-action="volume_down" aria-label="Baisser le son">
-      <span class="icon">🔉</span>Son −
-    </button>
-    <button class="zap" data-action="prev_channel" aria-label="Chaîne précédente">
-      <span class="icon">▼</span>Chaîne −
-    </button>
-  </section>
-
-  <section class="remote">
-    <button class="small" data-action="next_video"><span class="icon">⏭</span>Vidéo suivante</button>
-    <button class="small" data-action="stop" id="power">
-      <span class="icon" id="power-icon">⏹</span><span id="power-label">Arrêter la vidéo</span>
-    </button>
+    <button class="sign" data-action="volume_down" aria-label="Baisser le son">−</button>
+    <button class="sign zap" data-action="prev_channel" aria-label="Chaîne précédente">▼</button>
   </section>
 
   <h2>Chaînes</h2>
@@ -202,8 +261,36 @@
   const $ = (id) => document.getElementById(id);
   let shown = null;
 
+  // Progress of the current video: known at each poll, moved forward every second in between.
+  let progress = null;
+
+  function clock(seconds) {
+    const s = Math.floor(seconds);
+    const h = Math.floor(s / 3600);
+    const mm = String(Math.floor(s / 60) % 60).padStart(h ? 2 : 1, "0");
+    const ss = String(s % 60).padStart(2, "0");
+    return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+  }
+
+  function showProgress() {
+    const box = $("progress");
+    if (!progress) {
+      box.hidden = true;
+      return;
+    }
+    const elapsed = (Date.now() - progress.at) / 1000;
+    const position = Math.min(progress.position + elapsed, progress.duration);
+    box.hidden = false;
+    $("bar").style.width = `${(100 * position) / progress.duration}%`;
+    $("elapsed").textContent = clock(position);
+    $("total").textContent = clock(progress.duration);
+  }
+
   function render(status) {
-    const key = JSON.stringify(status);
+    const known = status.position !== null && status.duration;
+    progress = known ? { position: status.position, duration: status.duration, at: Date.now() } : null;
+    showProgress();
+    const key = JSON.stringify({ ...status, position: null });
     if (key === shown) return;
     shown = key;
 
@@ -215,7 +302,7 @@
     } else {
       $("number").textContent = status.current;
       $("name").textContent = status.channels[status.current - 1];
-      video.textContent = status.stopped ? "Vidéo arrêtée"
+      video.textContent = status.stopped ? `${status.sleep_text} 😴`
         : status.unavailable ? "Chaîne indisponible" : status.video;
     }
     video.classList.toggle("warning", status.unavailable && !status.stopped);
@@ -223,8 +310,8 @@
     const power = $("power");
     power.dataset.action = status.stopped ? "play" : "stop";
     power.classList.toggle("play", status.stopped);
-    $("power-icon").textContent = status.stopped ? "▶" : "⏹";
-    $("power-label").textContent = status.stopped ? "Regarder" : "Arrêter la vidéo";
+    power.textContent = status.stopped ? "📺" : "😴";
+    power.setAttribute("aria-label", status.stopped ? "Allumer" : "Éteindre");
 
     $("mute").classList.toggle("muted", status.muted);
     $("mute-icon").textContent = status.muted ? "🔈" : "🔇";
@@ -305,6 +392,7 @@
   setInterval(() => {
     if (document.visibilityState === "visible") refresh();
   }, 3000);
+  setInterval(showProgress, 1000);
   refresh();
 </script>
 </body>

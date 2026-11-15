@@ -1,3 +1,4 @@
+from datetime import time
 from pathlib import Path
 
 import pytest
@@ -112,4 +113,19 @@ def test_invalid_mpv_args(tmp_path: Path, value: str) -> None:
 def test_invalid_web_port(tmp_path: Path, value: str) -> None:
     path = write(tmp_path, f'channels_dir = "/tv"\nstate_file = "/s.json"\nweb_port = {value}\n')
     with pytest.raises(ConfigError, match="web_port"):
+        load_config(path)
+
+
+def test_bedtime(tmp_path: Path) -> None:
+    base = 'channels_dir = "/tv"\nstate_file = "/s.json"\n'
+    assert load_config(write(tmp_path, base)).bedtime is None
+    assert load_config(write(tmp_path, base + 'bedtime = ""')).bedtime is None
+    assert load_config(write(tmp_path, base + 'bedtime = "00:00"')).bedtime == time(0, 0)
+    assert load_config(write(tmp_path, base + "bedtime = 20:30:00")).bedtime == time(20, 30)
+
+
+@pytest.mark.parametrize("value", ['"minuit"', '"25:00"', "2000", "true"])
+def test_invalid_bedtime(tmp_path: Path, value: str) -> None:
+    path = write(tmp_path, f'channels_dir = "/tv"\nstate_file = "/s.json"\nbedtime = {value}')
+    with pytest.raises(ConfigError, match="bedtime"):
         load_config(path)

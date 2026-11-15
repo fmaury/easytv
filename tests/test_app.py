@@ -1,12 +1,19 @@
 import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from datetime import datetime, time
 from pathlib import Path
 
 import pytest
 
-from easytv.app import NO_CHANNEL_TEXT, STOPPED_TEXT, UNAVAILABLE_TEXT, App, StopReason
-from easytv.banner import message_banner, volume_banner
+from easytv.app import NO_CHANNEL_TEXT, UNAVAILABLE_TEXT, App, StopReason
+from easytv.banner import (
+    BEDTIME_SUBTITLE,
+    BEDTIME_TITLE,
+    message_banner,
+    sleep_screen,
+    volume_banner,
+)
 from easytv.config import Config
 from easytv.player import Closed, EndOfFile, Layer, Message, PlayerEvent, VideoError
 from easytv.remote import Action, Command
@@ -20,6 +27,7 @@ T0 = 1_000_000.0
 class FakePlayer:
     events: asyncio.Queue[PlayerEvent] = field(default_factory=asyncio.Queue)
     position: float | None = None
+    duration: float | None = None
     played: list[tuple[str, float]] = field(default_factory=list)
     banners: list[str] = field(default_factory=list)
     volume_banners: list[str] = field(default_factory=list)
@@ -362,8 +370,10 @@ def test_stop_then_play_resumes_where_it_stopped(env: Env) -> None:
         env.clock.now += 42
         await env.send(Message(("easytv", "stop")))
         assert env.player.stopped == 1
-        assert env.player.banners[-1] == message_banner(STOPPED_TEXT)
+        assert env.player.banners[-1] == sleep_screen()
         assert app.status().stopped
+        await env.send(Message(("easytv", "info")))  # the sleep screen stays
+        assert env.player.banners[-1] == sleep_screen()
         assert env.state().channels["1 - Cartoons"] == ChannelState("ep1.mp4", 42.0, T0 + 42)
 
         await env.send(Message(("easytv", "stop")))  # a second phone presses too
@@ -411,3 +421,73 @@ def test_play_after_all_channels_vanished(env: Env) -> None:
 
     env.run(scenario)
     assert env.player.banners[-1] == message_banner(NO_CHANNEL_TEXT)
+
+
+def test_prev_video_shows_the_banner(env: Env) -> None:
+    async def scenario(app: App) -> None:
+        await env.send(Message(("easytv", "prev_video")))
+
+    env.run(scenario)
+    assert env.player.played == [("1 - Cartoons/ep1.mp4", 0.0), ("1 - Cartoons/ep2.mp4", 0.0)]
+    assert env.player.banners[-1].endswith("ep2")
+
+
+# --- Bedtime and progress ----------------------------------------------------
+
+
+def bedtime_around(env: Env) -> tuple[time, float]:
+    """A bedtime one minute after now (local time), and its timestamp."""
+    moment = datetime.fromtimestamp(env.clock.now + 60).replace(second=0, microsecond=0)
+    return moment.time(), moment.timestamp()
+
+
+def test_bedtime_puts_the_tv_to_sleep_once(env: Env) -> None:
+    bedtime, at = bedtime_around(env)
+    env.config = Config(**{**env.config.__dict__, "bedtime": bedtime})
+
+    async def scenario(app: App) -> None:
+        env.clock.now = at - 10
+        await app.check_bedtime()
+        assert not app.status().stopped
+        env.player.position = 30.0
+        env.clock.now = at + 5
+        await app.check_bedtime()
+        assert app.status().stopped
+        assert app.status().sleep_text == BEDTIME_TITLE
+        assert env.player.banners[-1] == sleep_screen(BEDTIME_TITLE, BEDTIME_SUBTITLE)
+
+        await env.send(Message(("easytv", "play")))  # turned on again after bedtime
+        env.clock.now = at + 20
+        await app.check_bedtime()
+        assert not app.status().stopped
+
+    env.run(scenario)
+    assert env.player.played[-1] == ("1 - Cartoons/ep1.mp4", 30.0)
+
+
+def test_no_bedtime_on_a_clock_jump(env: Env) -> None:
+    # The Pi boots with a wrong clock, then the network sets it: not a passing bedtime.
+    bedtime, at = bedtime_around(env)
+    env.config = Config(**{**env.config.__dict__, "bedtime": bedtime})
+
+    async def scenario(app: App) -> None:
+        env.clock.now = at - 86_400 * 30
+        await app.check_bedtime()
+        env.clock.now = at + 5
+        await app.check_bedtime()
+        assert not app.status().stopped
+
+    env.run(scenario)
+
+
+def test_status_has_progress_while_playing(env: Env) -> None:
+    async def scenario(app: App) -> None:
+        env.player.position, env.player.duration = 12.5, 600.0
+        status = app.status()
+        assert (status.position, status.duration, status.sleep_text) == (12.5, 600.0, None)
+        await env.send(Message(("easytv", "stop")))
+        status = app.status()
+        assert (status.position, status.duration) == (None, None)
+        assert status.sleep_text == "La télé fait dodo"
+
+    env.run(scenario)

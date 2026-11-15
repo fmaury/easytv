@@ -1,10 +1,14 @@
 import pytest
 
 from easytv.banner import (
+    BEDTIME_SUBTITLE,
+    BEDTIME_TITLE,
+    SLEEP_TITLE,
     channel_banner,
     display_name,
     escape_ass,
     message_banner,
+    sleep_screen,
     video_title,
     volume_banner,
 )
@@ -66,3 +70,16 @@ def test_volume_banner_muted_has_empty_gauge() -> None:
     assert "Son coupé" in muted
     assert "&H00D7FF&" not in muted  # no yellow fill
     assert volume_banner(0, muted=False).count("\\p1") == 2  # panel and empty gauge only
+
+
+def test_sleep_screen_is_drawn_without_emoji_font() -> None:
+    screen = sleep_screen()
+    assert SLEEP_TITLE in screen
+    assert r"\p1" in screen  # the face is a drawing
+    assert all(ord(char) < 0x2000 for char in screen)  # no emoji: the Pi has no emoji font
+
+
+def test_bedtime_screen_has_its_own_text() -> None:
+    screen = sleep_screen(BEDTIME_TITLE, BEDTIME_SUBTITLE)
+    assert BEDTIME_TITLE in screen
+    assert SLEEP_TITLE not in screen

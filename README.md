@@ -147,16 +147,21 @@ IP de la Pi, par exemple `http://192.168.1.31`. EasyTV l'affiche au démarrage d
 **Pour que l'adresse IP ne change jamais**, réserve-la dans ta box. Sur une Freebox : Freebox OS
 (`mafreebox.freebox.fr`) → Paramètres de la Freebox → DHCP → Baux statiques → ajouter la Pi.
 
-La page affiche la chaîne en cours et permet de :
+La page affiche la chaîne en cours, l'épisode et sa **progression** (temps écoulé / durée), et
+permet de :
 
 - passer à la **chaîne suivante ou précédente** ;
 - aller **directement à une chaîne** en la touchant dans la liste ;
 - **monter, baisser ou couper le son** (une jauge s'affiche en haut à droite de la TV ; le volume
   est retenu, même après un redémarrage) ;
-- passer à la **vidéo suivante** ;
-- réafficher le **bandeau d'infos** sur la TV ;
-- **arrêter la vidéo** (écran noir, plus de son) ; **Regarder** la relance là où elle en était
-  (ou au début de la vidéo après plus d'une heure). Zapper relance aussi la lecture.
+- passer à la **vidéo suivante** ou **précédente** ;
+- réafficher le **bandeau d'infos** sur la TV (ⓘ) ;
+- **éteindre** la TV (😴) : la vidéo s'arrête et la TV affiche « La télé fait dodo » ; 📺 la
+  rallume là où elle en était (ou au début de la vidéo après plus d'une heure). Zapper la
+  rallume aussi.
+
+**Heure du coucher** : chaque jour à `bedtime` (minuit par défaut), la TV s'éteint toute seule et
+affiche « Il est temps de dormir ». On peut la rallumer depuis le téléphone.
 
 **Astuce** : ajoute la page à l'écran d'accueil (menu du navigateur → « Ajouter à l'écran
 d'accueil ») pour l'ouvrir comme une application.
@@ -179,6 +184,7 @@ modification : `sudo systemctl restart easytv`.
 | `input` | `remote` | `remote` (sur la Pi : on zappe par le téléphone) ou `keyboard` (clavier, sur PC) |
 | `mpv_args` | réglages Pi | Options du lecteur vidéo (décodage matériel, son HDMI) |
 | `web_port` | `80` | Port de la page web de télécommande (`0` la désactive) |
+| `bedtime` | `"00:00"` | Heure à laquelle la TV s'éteint toute seule chaque jour (`""` : jamais) |
 | `video_extensions` | `.mp4 .mkv .avi .mov .m4v .webm .ts` | Extensions reconnues |
 
 ## 7. Mettre à jour

@@ -13,6 +13,7 @@ class Action(StrEnum):
     PREV_CHANNEL = "prev_channel"
     GOTO = "goto"
     NEXT_VIDEO = "next_video"
+    PREV_VIDEO = "prev_video"
     INFO = "info"
     VOLUME_UP = "volume_up"
     VOLUME_DOWN = "volume_down"

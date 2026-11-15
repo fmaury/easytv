@@ -138,6 +138,31 @@ def test_next_video_and_wrap_around() -> None:
     assert t.state.channels[CARTOONS.name] == ChannelState("ep1.mp4", 0.0, T0 + 20)
 
 
+def test_prev_video_and_wrap_around() -> None:
+    t = tuner(saved(CARTOONS, "ep2.mp4", 500.0, T0))
+    t.start(T0)
+    assert t.prev_video(T0 + 10) == play(CARTOONS, "ep1.mp4")
+    assert t.prev_video(T0 + 20) == play(CARTOONS, "ep3.mp4")
+    assert t.state.channels[CARTOONS.name] == ChannelState("ep3.mp4", 0.0, T0 + 20)
+
+
+def test_prev_video_when_the_current_one_vanished() -> None:
+    t = tuner(saved(CARTOONS, "ep2.mp4", 500.0, T0))
+    t.start(T0)
+    t.state.channels[CARTOONS.name].video = "ep2b.mp4"  # deleted, not rescanned yet
+    assert t.prev_video(T0) == play(CARTOONS, "ep2.mp4")
+    t.state.channels[CARTOONS.name].video = "ep0.mp4"
+    assert t.prev_video(T0) == play(CARTOONS, "ep3.mp4")
+
+
+def test_prev_video_while_stopped_plays() -> None:
+    t = tuner()
+    t.start(T0)
+    t.stop(100.0, T0 + 100)
+    assert t.prev_video(T0 + 200) == play(CARTOONS, "ep3.mp4")
+    assert not t.stopped
+
+
 def test_single_video_channel_replays_it() -> None:
     t = tuner()
     t.start(T0)
@@ -200,6 +225,7 @@ def test_no_channels() -> None:
     assert t.zap(+1, T0) is None
     assert t.goto(1, T0) is None
     assert t.next_video(T0) is None
+    assert t.prev_video(T0) is None
     assert t.current is None
 
 

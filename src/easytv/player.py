@@ -19,6 +19,7 @@ KEY_BINDINGS = "".join(
         "UP script-message easytv next_channel\n",
         "DOWN script-message easytv prev_channel\n",
         "RIGHT script-message easytv next_video\n",
+        "LEFT script-message easytv prev_video\n",
         "i script-message easytv info\n",
         "- script-message easytv volume_down\n",
         "+ script-message easytv volume_up\n",
@@ -36,6 +37,7 @@ KEY_BINDINGS = "".join(
 _TIME_POS_ID = 1
 _AUDIO_OUTPUT_ID = 2
 _AUDIO_TRACK_ID = 3
+_DURATION_ID = 4
 _STARTED_AFTER = 0.5  # seconds actually played before a video counts as readable
 _CONNECT_TIMEOUT = 5.0
 _COMMAND_TIMEOUT = 5.0
@@ -80,6 +82,9 @@ class Player(Protocol):
     @property
     def has_started(self) -> bool: ...
 
+    @property
+    def duration(self) -> float | None: ...
+
     async def play(self, path: Path, start: float) -> None: ...
 
     async def show_banner(
@@ -114,6 +119,7 @@ class MpvPlayer:
         self._pending: dict[int, asyncio.Future[Any]] = {}
         self._next_id = 1
         self._position: float | None = None
+        self._duration: float | None = None
         self._loading = False
         self._played_from: float | None = None
         self._has_started = False
@@ -132,6 +138,11 @@ class MpvPlayer:
     def has_started(self) -> bool:
         """Whether the current video has really played, i.e. is readable."""
         return self._has_started
+
+    @property
+    def duration(self) -> float | None:
+        """Length of the current video in seconds, once known."""
+        return self._duration
 
     @property
     def audio_output(self) -> str | None:
@@ -172,11 +183,13 @@ class MpvPlayer:
         await self._command("observe_property", _TIME_POS_ID, "time-pos")
         await self._command("observe_property", _AUDIO_OUTPUT_ID, "current-ao")
         await self._command("observe_property", _AUDIO_TRACK_ID, "aid")
+        await self._command("observe_property", _DURATION_ID, "duration")
         # mpv runs without a terminal: its errors would be lost otherwise.
         await self._command("request_log_messages", "error")
 
     async def play(self, path: Path, start: float) -> None:
         self._position = None
+        self._duration = None
         self._loading = True
         self._played_from = None
         self._has_started = False
@@ -239,6 +252,7 @@ class MpvPlayer:
 
     async def stop(self) -> None:
         self._position = None
+        self._duration = None
         await self._command("stop")
 
     async def send_message(self, *args: str) -> None:
@@ -338,6 +352,9 @@ class MpvPlayer:
                 if self._audio_output is not None and self._audio_lost:
                     logger.info("sound is back")
                     self._audio_lost = False
+            case "property-change" if message.get("id") == _DURATION_ID:
+                data = message.get("data")
+                self._duration = float(data) if isinstance(data, int | float) else None
             case "property-change" if message.get("id") == _AUDIO_TRACK_ID:
                 data = message.get("data")
                 # Keep the last track of this video: mpv deselects it (false) when reopening

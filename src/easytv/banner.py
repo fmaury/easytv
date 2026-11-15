@@ -61,6 +61,49 @@ def volume_banner(volume: int, muted: bool) -> str:
     return "\n".join(parts)
 
 
+SLEEP_TITLE = "La télé fait dodo"
+SLEEP_SUBTITLE = "À tout à l'heure !"
+BEDTIME_TITLE = "Il est temps de dormir"
+BEDTIME_SUBTITLE = "Bonne nuit !"
+_CIRCLE_K = 0.5523  # Bézier control distance for a quarter circle, relative to the radius
+
+
+def _circle(cx: int, cy: int, r: int) -> str:
+    k = round(r * _CIRCLE_K)
+    return (
+        f"m {cx} {cy - r} b {cx + k} {cy - r} {cx + r} {cy - k} {cx + r} {cy} "
+        f"b {cx + r} {cy + k} {cx + k} {cy + r} {cx} {cy + r} "
+        f"b {cx - k} {cy + r} {cx - r} {cy + k} {cx - r} {cy} "
+        f"b {cx - r} {cy - k} {cx - k} {cy - r} {cx} {cy - r}"
+    )
+
+
+def _shape(color: str, path: str) -> str:
+    # \an7\pos(0,0): the drawing uses absolute screen coordinates.
+    return rf"{{\an7\pos(0,0)\bord0\shad0\1c&H{color}&\p1}}{path}{{\p0}}"
+
+
+def sleep_screen(title: str = SLEEP_TITLE, subtitle: str = SLEEP_SUBTITLE) -> str:
+    """The screen while the TV is "off": a sleeping face, drawn (the Pi has no emoji font)."""
+    cx, cy, r = WIDTH // 2, 380, 170
+    face, ink, snore = "00D7FF", "1E2A4A", "FFD9A0"  # yellow, dark brown, light blue
+    # Closed eye: a thin arc, bottom curve out then a shallower one back.
+    eye = "m {x0} 375 b {x1} 418 {x2} 418 {x3} 375 b {x2} 398 {x1} 398 {x0} 375"
+    parts = [
+        _shape(face, _circle(cx, cy, r)),
+        _shape(ink, eye.format(x0=cx - 95, x1=cx - 85, x2=cx - 35, x3=cx - 25)),
+        _shape(ink, eye.format(x0=cx + 25, x1=cx + 35, x2=cx + 85, x3=cx + 95)),
+        _shape(ink, _circle(cx, cy + 85, 26)),  # mouth, snoring
+    ]
+    for x, y, size in ((cx + 200, 250, 110), (cx + 290, 160, 85), (cx + 360, 95, 60)):
+        parts.append(rf"{{\an5\pos({x},{y})\fs{size}\b1\bord0\shad0\1c&H{snore}&}}Z")
+    parts.append(
+        rf"{{\an8\pos({cx},640)\fs100\b1\bord0\shad0\1c&HFFFFFF&}}{escape_ass(title)}"
+        rf"\N{{\fs60\b0\1c&HBBBBBB&}}{escape_ass(subtitle)}"
+    )
+    return "\n".join(parts)
+
+
 def message_banner(text: str) -> str:
     return (
         f"{{\\an5\\pos({WIDTH // 2},{HEIGHT // 2})\\fs90\\b1\\bord4\\shad0"

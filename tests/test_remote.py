@@ -10,6 +10,7 @@ from easytv.remote import Action, Command, parse_message
         (("easytv", "next_channel"), Command(Action.NEXT_CHANNEL)),
         (("easytv", "prev_channel"), Command(Action.PREV_CHANNEL)),
         (("easytv", "next_video"), Command(Action.NEXT_VIDEO)),
+        (("easytv", "prev_video"), Command(Action.PREV_VIDEO)),
         (("easytv", "info"), Command(Action.INFO)),
         (("easytv", "quit"), Command(Action.QUIT)),
         (("easytv", "stop"), Command(Action.STOP)),

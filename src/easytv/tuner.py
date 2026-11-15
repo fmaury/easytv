@@ -82,6 +82,13 @@ class Tuner:
         return self._tune(index, now)
 
     def next_video(self, now: float) -> Playback | None:
+        return self._step_video(+1, now)
+
+    def prev_video(self, now: float) -> Playback | None:
+        """The previous video from its start; before the first one comes the last one."""
+        return self._step_video(-1, now)
+
+    def _step_video(self, step: int, now: float) -> Playback | None:
         channel = self.current
         if channel is None:
             return None
@@ -89,9 +96,11 @@ class Tuner:
         current = self.state.channels[channel.name].video
         if current in channel.videos:
             i = channel.videos.index(current)
-            video = channel.videos[(i + 1) % len(channel.videos)]
-        else:
+            video = channel.videos[(i + step) % len(channel.videos)]
+        elif step > 0:
             video = _next_after(channel, current)
+        else:
+            video = _prev_before(channel, current)
         return self._play(channel, video, 0.0, now)
 
     def change_volume(self, delta: int) -> None:
@@ -164,3 +173,9 @@ def _next_after(channel: Channel, missing: str) -> str:
     """The video sorting right after a vanished one, wrapping to the first."""
     key = sort_key(missing)
     return next((v for v in channel.videos if sort_key(v) > key), channel.videos[0])
+
+
+def _prev_before(channel: Channel, missing: str) -> str:
+    """The video sorting right before a vanished one, wrapping to the last."""
+    key = sort_key(missing)
+    return next((v for v in reversed(channel.videos) if sort_key(v) < key), channel.videos[-1])

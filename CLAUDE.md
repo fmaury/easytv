@@ -34,7 +34,8 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
 | `library.py` | Scanne `channels_dir` → chaînes et vidéos triées | oui (testé avec `tmp_path`) |
 | `state.py` | État (dernière chaîne ; par chaîne : vidéo, position, heure de départ ; volume, son coupé), sauvegarde JSON atomique | oui |
 | `tuner.py` | Zapping, vidéo suivante, rebouclage, règle de reprise, contenu disparu, volume | **oui, cœur testé** |
-| `banner.py` | Bandeau façon TV en ASS (numéro, nom sans préfixe, titre), jauge de volume, messages | oui |
+| `banner.py` | Bandeau façon TV en ASS (numéro, nom sans préfixe, titre), jauge de volume, messages, écran « dodo » (visage dessiné : pas de police emoji sur la Pi) | oui |
+| `bedtime.py` | Heure du coucher atteinte entre deux vérifications (ignore les sauts d'horloge) | oui |
 | `player.py` | Pilote mpv via sa socket JSON IPC : charger, aller à, bandeau (`osd-overlay`), événements | non |
 | `remote.py` | Commandes (`Action`, `Command`) ↔ `script-message` mpv | oui |
 | `web.py` + `web.html` | Télécommande web pour téléphone : serveur HTTP `asyncio` (stdlib), `/api/status`, `/api/command` | non |
@@ -107,12 +108,15 @@ Codes de sortie : 0 = quitté (q/Échap, Ctrl+C), 1 = mpv fermé tout seul ou in
 (systemd doit relancer), 2 = config invalide.
 
 Touches en mode `input = "keyboard"` (définies dans `KEY_BINDINGS`, `player.py`) :
-↑/↓ chaîne suivante/précédente, 1–9 aller à la chaîne, → vidéo suivante, i/Entrée infos,
+↑/↓ chaîne suivante/précédente, 1–9 aller à la chaîne, →/← vidéo suivante/précédente, i/Entrée infos,
 `-`/`+` volume, m couper le son, s arrêter la vidéo, p la relancer, f plein écran, q/Échap quitter.
 
-Arrêt (`stop`/`play`, idempotents pour plusieurs téléphones) : compte comme quitter la chaîne
-(règle 3 au retour) ; zapper ou « vidéo suivante » relance la lecture ; pendant l'arrêt, le rescan
-ne lance rien. Non mémorisé : au redémarrage, la TV rejoue.
+Éteindre (`stop`/`play`, idempotents pour plusieurs téléphones ; boutons 😴/📺) : compte comme
+quitter la chaîne (règle 3 au retour) ; zapper ou vidéo suivante/précédente rallume ; pendant
+l'arrêt, le rescan ne lance rien ; écran « dodo » dessiné en ASS. Non mémorisé : au redémarrage,
+la TV rejoue. `bedtime` (config) éteint la TV chaque jour à heure fixe avec un autre message,
+vérifié toutes les 15 s ; un écart de plus de 5 min entre deux vérifications (horloge réglée par
+NTP au démarrage) n'éteint rien.
 
 Volume : celui de mpv (0–100, pas de 5), indépendant de celui de la TV ; changer le volume remet le
 son. Jauge et bandeau sont sur deux calques mpv distincts (`Layer`, `player.py`).

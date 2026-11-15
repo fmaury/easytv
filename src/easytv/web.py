@@ -38,7 +38,10 @@ class Status:
     unavailable: bool  # no readable video on the current channel
     volume: int  # 0-100
     muted: bool
-    stopped: bool  # video stopped from the remote
+    stopped: bool  # TV "off" from the remote (or at bedtime)
+    position: float | None = None  # seconds into the current video, while playing
+    duration: float | None = None  # length of the current video, while playing
+    sleep_text: str | None = None  # message on the TV while it is "off"
 
 
 @dataclass(frozen=True)
