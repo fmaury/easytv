@@ -66,9 +66,8 @@
   }
   .now .name { font-size: 22px; font-weight: 700; }
   .now .video { color: var(--muted); margin-top: 2px; }
-  .now .video.warning { color: var(--danger); }
   .now .text { min-width: 0; flex: 1; }
-  .progress { margin-top: 10px; }
+  .progress { margin-top: 10px; position: relative; }
   .progress .bar {
     height: 6px;
     border-radius: 3px;
@@ -84,6 +83,19 @@
     color: var(--muted);
     font-variant-numeric: tabular-nums;
   }
+  /* TV off or channel unavailable: a message in place of the bar, at the same height. */
+  .progress .message {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .progress .message[hidden] { display: none; }
+  .progress .message.warning { color: var(--danger); }
   .now .name, .now .video { overflow-wrap: anywhere; }
 
   .offline {
@@ -253,8 +265,11 @@
       <div class="name" id="name">Connexion…</div>
       <div class="video" id="video"></div>
       <div class="progress" id="progress" hidden>
-        <div class="bar"><div id="bar"></div></div>
-        <div class="times"><span id="elapsed"></span><span id="total"></span></div>
+        <div id="meter">
+          <div class="bar"><div id="bar"></div></div>
+          <div class="times"><span id="elapsed"></span><span id="total"></span></div>
+        </div>
+        <div class="message" id="progress-message" hidden></div>
       </div>
     </div>
   </section>
@@ -306,8 +321,8 @@
   let shown = null;
 
   // Progress of the current video: known at each poll, moved forward every second in between.
-  // "loading": a placeholder while a video starts, so the panel does not jump; "idle": TV off,
-  // the space is kept but nothing shown; null: no channel at all.
+  // "loading": a placeholder while a video starts, so the panel does not jump; "idle": TV off or
+  // channel unavailable, a message takes the bar's place; null: no channel at all.
   let progress = null;
 
   function clock(seconds) {
@@ -321,9 +336,11 @@
   function showProgress() {
     const box = $("progress");
     box.hidden = progress === null;
-    box.style.visibility = progress === "idle" ? "hidden" : "visible";
-    if (progress === null || progress === "idle") return;
-    if (progress === "loading") {
+    $("meter").style.visibility = progress === "idle" ? "hidden" : "visible";
+    $("progress-message").hidden = progress !== "idle";
+    if (progress === null) return;
+    // Placeholder times even when hidden: an empty line would make the panel shrink.
+    if (progress === "loading" || progress === "idle") {
       $("bar").style.width = "0%";
       $("elapsed").textContent = "–:––";
       $("total").textContent = "–:––";
@@ -360,10 +377,12 @@
     } else {
       $("number").textContent = status.current;
       $("name").textContent = status.channels[status.current - 1];
-      video.textContent = status.stopped ? `${status.sleep_text} 😴`
-        : status.unavailable ? "Chaîne indisponible" : status.video;
+      // The episode stays shown when the TV is off: the panel keeps its height.
+      video.textContent = status.video;
     }
-    video.classList.toggle("warning", status.unavailable && !status.stopped);
+    const message = $("progress-message");
+    message.textContent = status.stopped ? `${status.sleep_text} 😴` : "Chaîne indisponible";
+    message.classList.toggle("warning", status.unavailable && !status.stopped);
 
     const power = $("power");
     power.dataset.action = status.stopped ? "play" : "stop";
