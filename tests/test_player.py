@@ -140,8 +140,8 @@ def test_sound_comes_back_after_the_audio_output_failed(
 ) -> None:
     # Like an unplugged HDMI cable: the ALSA device is missing when the video starts.
     clip = tmp_path / "with-sound.mp4"
-    source = ["-f", "lavfi", "-i", "testsrc2=size=160x90:rate=25:duration=4"]
-    sound = ["-f", "lavfi", "-i", "sine=duration=4"]
+    source = ["-f", "lavfi", "-i", "testsrc2=size=160x90:rate=25:duration=5"]
+    sound = ["-f", "lavfi", "-i", "sine=duration=5"]
     encode = ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest"]
     subprocess.run(
         ["ffmpeg", "-loglevel", "error", *source, *sound, *encode, str(clip)], check=True
@@ -155,7 +155,8 @@ def test_sound_comes_back_after_the_audio_output_failed(
         await player.play(clip, start=0)
         await wait_position(player, 1.0)
         assert player.audio_output is None
-        await player.check_audio()  # still missing: nothing breaks
+        await player.check_audio()  # still missing: mpv now deselects the audio track
+        await asyncio.sleep(0.5)
         extra.write_text("pcm.easytv_test { type null }\n", encoding="utf-8")  # plugged back
         await player.check_audio()
         while player.audio_output is None:

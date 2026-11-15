@@ -181,6 +181,7 @@ class MpvPlayer:
         self._played_from = None
         self._has_started = False
         self._logged.clear()
+        self._audio_track = None
         # The `start` option applies to the next loaded file; setting it first works on every
         # mpv version, unlike loadfile's per-file options whose syntax changed in mpv 0.38.
         await self._command("set_property", "start", f"{start:.3f}")
@@ -339,9 +340,11 @@ class MpvPlayer:
                     self._audio_lost = False
             case "property-change" if message.get("id") == _AUDIO_TRACK_ID:
                 data = message.get("data")
-                # bool is a subclass of int: false means "no audio track".
-                is_track = isinstance(data, int) and not isinstance(data, bool)
-                self._audio_track = data if is_track else None
+                # Keep the last track of this video: mpv deselects it (false) when reopening
+                # the audio output fails, and it must be selected again at the next try.
+                # bool is a subclass of int: exclude it.
+                if isinstance(data, int) and not isinstance(data, bool):
+                    self._audio_track = data
             case "playback-restart":
                 self._loading = False
             case "end-file":

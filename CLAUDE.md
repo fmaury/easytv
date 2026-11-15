@@ -84,7 +84,9 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
   `--hwdec=auto` ne choisit pas v4l2m2m.
 - **Son HDMI perdu** (câble débranché, testé le 2026-11-14) : mpv lit alors chaque vidéo **sans
   son** et la termine en `end-file` « error » (« audio output initialization failed »).
-  `ao-reload` ne rétablit rien ; désélectionner puis resélectionner la piste (`aid`) si.
+  `ao-reload` ne rétablit rien ; désélectionner puis resélectionner la piste (`aid`) si (mpv la
+  désélectionne après un essai raté : retenir son numéro). Erreur vue : « Unknown error 524 »,
+  noyau « ASoC error (-22) … i2s-hifi » : ce n'est pas PipeWire.
   → `check_audio` toutes les 10 s, et une vidéo qui a joué puis finit en erreur n'est pas
   « illisible ». Les erreurs de mpv sont recopiées dans le journal (`request_log_messages`).
 - USB 2.0 uniquement ; système sur carte SD (le démarrage USB du 3 B demande une activation préalable).
