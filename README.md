@@ -151,7 +151,7 @@ La page affiche la chaîne en cours, l'épisode et sa **progression** (temps éc
 permet de :
 
 - passer à la **chaîne suivante ou précédente** ;
-- aller **directement à une chaîne** en la touchant dans la liste ;
+- aller **directement à une chaîne** : ☰ ouvre la liste de toutes les chaînes, on touche la bonne ;
 - **monter, baisser ou couper le son** (une jauge s'affiche en haut à droite de la TV ; le volume
   est retenu, même après un redémarrage) ;
 - passer à la **vidéo suivante** ou **précédente** ;
