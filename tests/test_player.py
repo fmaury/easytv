@@ -1,7 +1,8 @@
 import asyncio
+import logging
 import shutil
 import subprocess
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from pathlib import Path
 
 import pytest
@@ -24,11 +25,11 @@ def video(tmp_path_factory: pytest.TempPathFactory) -> Path:
     return path
 
 
-def run(scenario: Callable[[MpvPlayer], Awaitable[None]]) -> None:
+def run(
+    scenario: Callable[[MpvPlayer], Awaitable[None]], audio: Sequence[str] = ("--ao=null",)
+) -> None:
     async def main() -> None:
-        player = MpvPlayer(
-            keyboard=False, extra_args=["--vo=null", "--ao=null", "--force-window=no"]
-        )
+        player = MpvPlayer(keyboard=False, extra_args=["--vo=null", *audio, "--force-window=no"])
         await player.start()
         try:
             await asyncio.wait_for(scenario(player), timeout=15)
@@ -128,3 +129,40 @@ def test_volume_gauge_and_banner_use_separate_layers(video: Path) -> None:
         await player._overlay(None, Layer.BANNER)
 
     run(scenario)
+
+
+ALSA_CONFIG = Path("/usr/share/alsa/alsa.conf")
+
+
+@pytest.mark.skipif(not ALSA_CONFIG.exists(), reason="needs ALSA")
+def test_sound_comes_back_after_the_audio_output_failed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    # Like an unplugged HDMI cable: the ALSA device is missing when the video starts.
+    clip = tmp_path / "with-sound.mp4"
+    source = ["-f", "lavfi", "-i", "testsrc2=size=160x90:rate=25:duration=4"]
+    sound = ["-f", "lavfi", "-i", "sine=duration=4"]
+    encode = ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest"]
+    subprocess.run(
+        ["ffmpeg", "-loglevel", "error", *source, *sound, *encode, str(clip)], check=True
+    )
+    extra = tmp_path / "asound.conf"
+    extra.write_text("", encoding="utf-8")
+    monkeypatch.setenv("ALSA_CONFIG_PATH", f"{ALSA_CONFIG}:{extra}")
+    caplog.set_level(logging.INFO, logger="easytv.player")
+
+    async def scenario(player: MpvPlayer) -> None:
+        await player.play(clip, start=0)
+        await wait_position(player, 1.0)
+        assert player.audio_output is None
+        await player.check_audio()  # still missing: nothing breaks
+        extra.write_text("pcm.easytv_test { type null }\n", encoding="utf-8")  # plugged back
+        await player.check_audio()
+        while player.audio_output is None:
+            await asyncio.sleep(0.05)
+        # The video played: it must not be reported as unreadable.
+        assert await next_event(player) == EndOfFile()
+
+    run(scenario, audio=["--ao=alsa", "--audio-device=alsa/easytv_test"])
+    assert "Could not open/initialize audio device" in caplog.text
+    assert "sound is back" in caplog.text

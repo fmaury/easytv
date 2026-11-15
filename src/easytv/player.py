@@ -34,6 +34,8 @@ KEY_BINDINGS = "".join(
 )
 
 _TIME_POS_ID = 1
+_AUDIO_OUTPUT_ID = 2
+_AUDIO_TRACK_ID = 3
 _STARTED_AFTER = 0.5  # seconds actually played before a video counts as readable
 _CONNECT_TIMEOUT = 5.0
 _COMMAND_TIMEOUT = 5.0
@@ -86,6 +88,8 @@ class Player(Protocol):
 
     async def set_volume(self, volume: int, muted: bool) -> None: ...
 
+    async def check_audio(self) -> None: ...
+
     async def stop(self) -> None: ...
 
 
@@ -115,6 +119,10 @@ class MpvPlayer:
         self._has_started = False
         self._entry_id: int | None = None
         self._banner_timers: dict[Layer, asyncio.Task[None]] = {}
+        self._audio_output: str | None = None
+        self._audio_track: int | None = None
+        self._audio_lost = False
+        self._logged: set[str] = set()  # mpv errors already logged for the current video
 
     @property
     def position(self) -> float | None:
@@ -124,6 +132,11 @@ class MpvPlayer:
     def has_started(self) -> bool:
         """Whether the current video has really played, i.e. is readable."""
         return self._has_started
+
+    @property
+    def audio_output(self) -> str | None:
+        """mpv's audio output driver, None when no sound is being played."""
+        return self._audio_output
 
     async def start(self) -> None:
         self._tmp = tempfile.TemporaryDirectory(prefix="easytv-")
@@ -157,12 +170,17 @@ class MpvPlayer:
         reader = await self._connect(socket)
         self._reader_task = asyncio.create_task(self._read_loop(reader))
         await self._command("observe_property", _TIME_POS_ID, "time-pos")
+        await self._command("observe_property", _AUDIO_OUTPUT_ID, "current-ao")
+        await self._command("observe_property", _AUDIO_TRACK_ID, "aid")
+        # mpv runs without a terminal: its errors would be lost otherwise.
+        await self._command("request_log_messages", "error")
 
     async def play(self, path: Path, start: float) -> None:
         self._position = None
         self._loading = True
         self._played_from = None
         self._has_started = False
+        self._logged.clear()
         # The `start` option applies to the next loaded file; setting it first works on every
         # mpv version, unlike loadfile's per-file options whose syntax changed in mpv 0.38.
         await self._command("set_property", "start", f"{start:.3f}")
@@ -186,6 +204,22 @@ class MpvPlayer:
     async def set_volume(self, volume: int, muted: bool) -> None:
         await self._command("set_property", "volume", volume)
         await self._command("set_property", "mute", muted)
+
+    async def check_audio(self) -> None:
+        """Bring the sound back if the audio output failed (e.g. HDMI cable unplugged).
+
+        mpv then keeps playing the video without sound for good, and `ao-reload` does not
+        help: selecting the audio track again does.
+        """
+        track = self._audio_track
+        # Once a video plays, its audio output is open: none by then means it failed.
+        if self._audio_output is not None or track is None or not self._has_started:
+            return
+        if not self._audio_lost:
+            logger.warning("no sound output: retrying until it comes back")
+            self._audio_lost = True
+        await self._command("set_property", "aid", "no")
+        await self._command("set_property", "aid", track)
 
     async def _clear_banner_after(self, seconds: float, layer: Layer) -> None:
         await asyncio.sleep(seconds)
@@ -297,12 +331,33 @@ class MpvPlayer:
                 # Ignore the previous file's last updates while the new one is loading.
                 if not self._loading:
                     self._on_time_pos(data)
+            case "property-change" if message.get("id") == _AUDIO_OUTPUT_ID:
+                data = message.get("data")
+                self._audio_output = data if isinstance(data, str) else None
+                if self._audio_output is not None and self._audio_lost:
+                    logger.info("sound is back")
+                    self._audio_lost = False
+            case "property-change" if message.get("id") == _AUDIO_TRACK_ID:
+                data = message.get("data")
+                # bool is a subclass of int: false means "no audio track".
+                is_track = isinstance(data, int) and not isinstance(data, bool)
+                self._audio_track = data if is_track else None
             case "playback-restart":
                 self._loading = False
             case "end-file":
                 self._on_end_file(message)
             case "client-message":
                 self.events.put_nowait(Message(tuple(str(a) for a in message.get("args", []))))
+            case "log-message":
+                self._on_log(message)
+
+    def _on_log(self, message: dict[str, Any]) -> None:
+        text = str(message.get("text", "")).strip()
+        # Some errors repeat for every audio packet: log each one once per video.
+        if not text or text in self._logged:
+            return
+        self._logged.add(text)
+        logger.warning("mpv: [%s] %s", message.get("prefix", "?"), text)
 
     def _on_time_pos(self, data: Any) -> None:
         self._position = float(data) if isinstance(data, int | float) else None
@@ -319,6 +374,10 @@ class MpvPlayer:
             return  # a file we already replaced
         match message.get("reason"):
             case "eof":
+                self.events.put_nowait(EndOfFile())
+            case "error" if self._has_started:
+                # It did play: e.g. without sound when the audio output failed. Not unreadable.
+                logger.warning("video ended with an error: %s", message.get("file_error"))
                 self.events.put_nowait(EndOfFile())
             case "error":
                 self.events.put_nowait(VideoError(str(message.get("file_error", "unknown"))))

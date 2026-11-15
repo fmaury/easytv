@@ -41,6 +41,9 @@ class FakePlayer:
     async def set_volume(self, volume: int, muted: bool) -> None:
         self.volume = (volume, muted)
 
+    async def check_audio(self) -> None:
+        pass
+
     async def stop(self) -> None:
         self.stopped += 1
         self.position = None

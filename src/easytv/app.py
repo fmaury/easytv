@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 BANNER_SECONDS = 4.0
 VOLUME_SECONDS = 2.5
 VOLUME_STEP = 5
+AUDIO_CHECK_SECONDS = 10.0
 NO_CHANNEL_TEXT = "Aucune chaîne"
 UNAVAILABLE_TEXT = "Chaîne indisponible"
 STOPPED_TEXT = "Arrêt"
@@ -54,6 +55,7 @@ class App:
         timers = [
             asyncio.create_task(self._every(self._config.save_interval, self.save)),
             asyncio.create_task(self._every(self._config.rescan_interval, self.rescan)),
+            asyncio.create_task(self._every(AUDIO_CHECK_SECONDS, self._player.check_audio)),
         ]
         try:
             while True:

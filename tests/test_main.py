@@ -46,6 +46,9 @@ class ClosingPlayer:
     async def set_volume(self, volume: int, muted: bool) -> None:
         pass
 
+    async def check_audio(self) -> None:
+        pass
+
     async def stop(self) -> None:
         pass
 
