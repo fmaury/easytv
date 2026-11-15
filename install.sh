@@ -9,6 +9,8 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 USER_NAME="$(id -un)"
 CHANNELS_DIR="/media/tv"
 SERVICE="/etc/systemd/system/easytv.service"
+HOSTNAME_DEFAULT="raspberrypi"
+HOSTNAME_NEW="easytv"
 
 step() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 info() { printf '    %s\n' "$*"; }
@@ -68,7 +70,30 @@ step "Dossier des chaînes : $CHANNELS_DIR"
 sudo install -d -o "$USER_NAME" -g "$USER_NAME" "$CHANNELS_DIR"
 info "Un sous-dossier par chaîne, par exemple $CHANNELS_DIR/01 - Dessins animés/"
 
-# --- 7. Service systemd -------------------------------------------------------
+# --- 7. Nom sur le réseau -----------------------------------------------------
+# Only the default name is changed: a name chosen by the user is kept.
+step "Nom sur le réseau"
+if [[ "$(hostname)" == "$HOSTNAME_DEFAULT" ]]; then
+    # One sudo call: sudo resolves the current name, which /etc/hosts must still contain.
+    sudo sh -c "
+        sed -i 's/^127\.0\.1\.1[[:space:]].*/127.0.1.1\t$HOSTNAME_NEW/' /etc/hosts
+        grep -q '^127\.0\.1\.1' /etc/hosts || printf '127.0.1.1\t$HOSTNAME_NEW\n' >>/etc/hosts
+        hostnamectl set-hostname $HOSTNAME_NEW
+    "
+    # cloud-init (Raspberry Pi OS customisation) must never put the old name back.
+    if [[ -d /etc/cloud/cloud.cfg.d ]]; then
+        echo "preserve_hostname: true" | sudo tee /etc/cloud/cloud.cfg.d/99_easytv.cfg >/dev/null
+    fi
+    # Announce the new name on the network (.local) right away.
+    sudo systemctl try-restart avahi-daemon 2>/dev/null || true
+    info "Nom changé : $HOSTNAME_DEFAULT → $HOSTNAME_NEW"
+else
+    info "Nom conservé : $(hostname)"
+fi
+PAGE="http://$(hostname).local"
+info "Télécommande sur le téléphone : $PAGE"
+
+# --- 8. Service systemd -------------------------------------------------------
 step "Service de démarrage automatique"
 sed -e "s|@USER@|$USER_NAME|g" -e "s|@DIR@|$DIR|g" "$DIR/deploy/easytv.service" \
     | sudo tee "$SERVICE" >/dev/null
@@ -76,7 +101,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable --quiet easytv
 info "$SERVICE"
 
-# --- 8. Démarrage sans bureau -------------------------------------------------
+# --- 9. Démarrage sans bureau -------------------------------------------------
 step "Démarrage en mode TV (sans bureau)"
 if [[ "$(systemctl get-default)" == "graphical.target" ]]; then
     sudo systemctl set-default multi-user.target >/dev/null
@@ -87,7 +112,7 @@ else
     info "Déjà en mode console."
 fi
 
-# --- 9. Lancement -------------------------------------------------------------
+# --- 10. Lancement ------------------------------------------------------------
 step "Lancement d'EasyTV"
 sudo systemctl restart easytv
 sleep 3
@@ -100,6 +125,7 @@ fi
 cat <<EOF
 
 EasyTV est installé.
+  Télécommande : $PAGE   (sur un téléphone du Wi-Fi de la maison)
   Vidéos     : $CHANNELS_DIR/<chaîne>/   (par SFTP : utilisateur $USER_NAME, port 22)
   Config     : $DIR/config.toml
   Logs       : journalctl -u easytv -f

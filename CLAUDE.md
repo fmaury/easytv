@@ -139,7 +139,11 @@ des `script-message easytv <action>` sur la socket `/tmp/easytv-*/mpv.sock`.
 - `install.sh` (idempotent, = commande de mise à jour après `git pull`) : paquets apt (mpv, git,
   curl, v4l-utils), uv, `uv sync --no-dev --frozen`, `config.toml` depuis `config.example.toml`
   (jamais écrasé ; son HDMI détecté : `vc4hdmi` sur Pi 3, `vc4hdmi0` sur Pi 4), `/media/tv`,
-  service systemd, démarrage sans bureau (`multi-user.target`).
+  nom `raspberrypi` → `easytv` (seulement le nom par défaut ; `/etc/hosts`, `hostnamectl`,
+  `preserve_hostname: true` pour cloud-init, relance d'avahi), service systemd, démarrage sans
+  bureau (`multi-user.target`).
+  Pourquoi le nom d'Imager peut ne pas s'appliquer : sa ligne `hostname` restée commentée dans
+  `/boot/firmware/user-data` (cas vu le 2026-11-15).
 - `deploy/easytv.service` : modèle (`@USER@`, `@DIR@`), `Restart=always`, `StateDirectory=easytv`,
   attente NTP (60 s max) avant le lancement.
   systemd arrête le service par SIGTERM : géré comme Ctrl+C (sauvegarde finale de la position).

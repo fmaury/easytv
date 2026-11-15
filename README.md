@@ -57,7 +57,8 @@ liste des chaînes ([voir plus bas](#5-zapper-avec-le-téléphone)).
    ```bash
    ssh ton-utilisateur@easytv.local
    ```
-   Si `easytv.local` ne répond pas, cherche l'adresse IP de la Pi dans l'interface de ta box et
+   Si `easytv.local` ne répond pas, essaie `raspberrypi.local` (le nom par défaut : l'installation
+   le remplacera par `easytv`), ou cherche l'adresse IP de la Pi dans l'interface de ta box et
    utilise `ssh ton-utilisateur@192.168.x.x`.
 
 <details>
@@ -71,8 +72,9 @@ sudo raspi-config
 ```
 
 - *Interface Options* → *SSH* → *Yes*
-- *System Options* → *Hostname* → `easytv`
 - *Localisation Options* → *Timezone* → *Europe* → *Paris*
+
+(Le nom `easytv` sera donné par l'installation.)
 
 Valide, laisse la Pi redémarrer, et reprends à l'étape 3.
 </details>
@@ -88,7 +90,9 @@ cd easytv
 ```
 
 Le script te demande ton mot de passe une fois, puis installe tout (mpv, EasyTV, le démarrage
-automatique). À la fin, la TV affiche **« Aucune chaîne »** : il ne reste qu'à ajouter des vidéos.
+automatique). Si la Pi s'appelle encore `raspberrypi`, il la renomme `easytv` (un nom choisi par
+toi est conservé). À la fin, la TV affiche **« Aucune chaîne »** : il ne reste qu'à ajouter des
+vidéos.
 
 ## 4. Ajouter des vidéos
 
@@ -132,7 +136,8 @@ ffmpeg -i entree.mkv -c:v libx264 -preset medium -crf 21 -vf "scale='min(1920,iw
 
 Sur un téléphone connecté au **Wi-Fi de la maison**, ouvre dans le navigateur :
 
-**`http://easytv.local`** (`easytv` = le nom d'hôte choisi à la préparation de la carte SD)
+**`http://easytv.local`** (`easytv` = le nom de la Pi ; le `http://` évite que le navigateur
+lance une recherche)
 
 Ce nom est annoncé par la Pi elle-même sur le réseau : pas besoin de le déclarer dans la box. Il
 marche sur iPhone, Mac et PC ; sur certains téléphones Android, non. Dans ce cas, utilise l'adresse
