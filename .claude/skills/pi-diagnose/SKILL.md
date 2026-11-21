@@ -45,9 +45,13 @@ ssh HOST 'CTL get path time-pos duration hwdec-current frame-drop-count decoder-
 ## 3. Écran de la TV
 
 ```bash
-ssh HOST 'CTL cmd screenshot-to-file /tmp/easytv-shot.png window && sleep 2 && ls -l /tmp/easytv-shot.png'
-scp HOST:/tmp/easytv-shot.png <scratchpad>/easytv-shot.png
+ssh HOST 'CTL cmd screenshot-to-file /tmp/easytv-shot.jpg window && ls -l /tmp/easytv-shot.jpg'
+scp HOST:/tmp/easytv-shot.jpg <scratchpad>/easytv-shot.jpg
 ```
+
+mpv ne répond qu'une fois l'image écrite (plusieurs secondes sur la Pi 3). JPEG plutôt que PNG :
+plus rapide à encoder, ~10 fois plus léger. Échoue si aucune vidéo ne joue (TV éteinte, « Aucune
+chaîne ») : le dire, ce n'est pas une panne.
 
 Puis lire l'image. La capture vient de mpv : elle montre ce que mpv dessine, pas forcément ce que
 la TV affiche. En cas d'écran noir réel avec une capture normale, penser au plan DRM refusé

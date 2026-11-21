@@ -12,7 +12,9 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-_TIMEOUT = 5.0
+# mpv answers screenshot-to-file once the image is written: more than 5 s for a 1080p PNG on a
+# Pi 3 (measured 2026-11-21).
+TIMEOUT = 30.0
 
 
 class CtlError(Exception):
@@ -28,9 +30,9 @@ def find_socket(tmp_dir: Path) -> Path:
 
 
 class MpvConnection:
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, timeout: float = TIMEOUT) -> None:
         self._sock = socket.socket(socket.AF_UNIX)
-        self._sock.settimeout(_TIMEOUT)
+        self._sock.settimeout(timeout)
         try:
             self._sock.connect(str(path))
         except OSError as e:
