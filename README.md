@@ -219,4 +219,5 @@ uv run easytv
 uv run pytest
 ```
 
-Architecture, règles de comportement et conventions : voir [`CLAUDE.md`](CLAUDE.md).
+Architecture, règles de comportement et conventions : voir [`CLAUDE.md`](CLAUDE.md) ;
+feuille de route : [`ROADMAP.md`](ROADMAP.md).
