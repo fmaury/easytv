@@ -59,7 +59,7 @@ class App:
             "%d channel(s) found in %s", len(self._tuner.channels), self._config.channels_dir
         )
         await self._apply_volume()
-        await self._show(self._tuner.start(self._clock()))
+        await self._show(self._tuner.start(self._clock()), snow=True)
         timers = [
             asyncio.create_task(self._every(self._config.save_interval, self.save)),
             asyncio.create_task(self._every(self._config.rescan_interval, self.rescan)),
@@ -202,7 +202,8 @@ class App:
                 return None
         if playback is not None:
             same_channel = command.action in (Action.NEXT_VIDEO, Action.PREV_VIDEO)
-            await self._show(playback, reset=not same_channel)
+            # Snow when the channel changes or the TV comes on, not between videos of a channel.
+            await self._show(playback, reset=not same_channel, snow=not same_channel)
             await self.save()
         return None
 
@@ -244,7 +245,12 @@ class App:
         await self._banner()
 
     async def _show(
-        self, playback: Playback | None, *, banner: bool = True, reset: bool = False
+        self,
+        playback: Playback | None,
+        *,
+        banner: bool = True,
+        reset: bool = False,
+        snow: bool = False,
     ) -> None:
         if reset:
             self._failures = 0
@@ -260,7 +266,9 @@ class App:
             playback.video_path.name,
             playback.start,
         )
-        await self._player.play(playback.video_path, playback.start)
+        await self._player.play(
+            playback.video_path, playback.start, snow=snow and self._config.snow
+        )
         if banner:
             await self._banner()
 

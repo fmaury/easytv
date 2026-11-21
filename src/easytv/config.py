@@ -29,6 +29,7 @@ class Config:
     mpv_args: tuple[str, ...] = ()
     web_port: int = 8080  # web remote for phones; 0 disables it
     bedtime: time | None = None  # the TV goes to sleep every day at this time
+    snow: bool = True  # TV snow when changing channel and when the TV comes on
 
 
 def load_config(path: Path) -> Config:
@@ -52,6 +53,7 @@ def load_config(path: Path) -> Config:
         mpv_args=_mpv_args(data),
         web_port=_port(data, "web_port", defaults.web_port),
         bedtime=_bedtime(data),
+        snow=_bool(data, "snow", defaults.snow),
     )
 
 
@@ -102,6 +104,13 @@ def _mpv_args(data: dict[str, Any]) -> tuple[str, ...]:
     if not isinstance(value, list) or not all(isinstance(v, str) and v for v in value):
         raise ConfigError("mpv_args must be a list of strings")
     return tuple(value)
+
+
+def _bool(data: dict[str, Any], key: str, default: bool) -> bool:
+    value = data.get(key, default)
+    if not isinstance(value, bool):
+        raise ConfigError(f"{key} must be true or false")
+    return value
 
 
 def _bedtime(data: dict[str, Any]) -> time | None:

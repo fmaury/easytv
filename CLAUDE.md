@@ -28,6 +28,10 @@ là où on l'a laissée.
    lance rien ; non mémorisé (au redémarrage, la TV rejoue). `bedtime` éteint chaque jour à heure
    fixe (vérifié toutes les 15 s ; un saut d'horloge de plus de 5 min, NTP au boot, n'éteint rien).
 10. **Volume** : celui de mpv (0–100, pas de 5), indépendant de la TV ; le changer remet le son.
+11. **Neige** (`snow`, activée par défaut) : ~0,7 s de neige, image et son (`snow.mp4`, H.264,
+    `scripts/make-snow.sh`), avant la vidéo quand la chaîne change, au démarrage et au
+    rallumage ; jamais entre deux vidéos d'une chaîne. Pendant la neige, la position de la vidéo
+    à venir est inconnue ; zapper ou éteindre pendant la neige l'annule.
 
 ## Architecture
 
@@ -41,7 +45,7 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
 | `tuner.py` | Zapping, vidéo suivante, rebouclage, règle de reprise, contenu disparu, volume | **oui, cœur testé** |
 | `banner.py` | Bandeau façon TV en ASS (numéro, nom sans préfixe, titre), jauge de volume, messages, écran « dodo » (visage dessiné : pas de police emoji sur la Pi) | oui |
 | `bedtime.py` | Heure du coucher atteinte entre deux vérifications (ignore les sauts d'horloge) | oui |
-| `player.py` | Pilote mpv via sa socket JSON IPC : charger, aller à, bandeau et jauge (deux calques `Layer`), événements | non |
+| `player.py` | Pilote mpv via sa socket JSON IPC : charger (après la neige si demandé), aller à, bandeau et jauge (deux calques `Layer`), événements | non |
 | `remote.py` | Commandes (`Action`, `Command`) ↔ `script-message` mpv | oui |
 | `web.py` + `web.html` | Télécommande web pour téléphone : serveur HTTP `asyncio` (stdlib), `/api/status`, `/api/command` | non |
 | `app.py` | Boucle principale : relie remote → tuner → player, sauvegarde et rescan périodiques | non |

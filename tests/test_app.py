@@ -1,6 +1,6 @@
 import asyncio
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, time
 from pathlib import Path
 
@@ -35,9 +35,12 @@ class FakePlayer:
     stopped: int = 0
     broken: set[str] = field(default_factory=set)  # file names that will not play
     has_started: bool = False
+    snowed: list[str] = field(default_factory=list)  # videos played after the snow
 
-    async def play(self, path: Path, start: float) -> None:
+    async def play(self, path: Path, start: float, *, snow: bool = False) -> None:
         self.played.append((f"{path.parent.name}/{path.name}", start))
+        if snow:
+            self.snowed.append(f"{path.parent.name}/{path.name}")
         self.position = None
         self.has_started = path.name not in self.broken
 
@@ -491,3 +494,47 @@ def test_status_has_progress_while_playing(env: Env) -> None:
         assert status.sleep_text == "La télé fait dodo"
 
     env.run(scenario)
+
+
+# --- Snow --------------------------------------------------------------------
+
+
+def test_snow_when_the_channel_changes_and_when_the_tv_comes_on(env: Env) -> None:
+    async def scenario(app: App) -> None:
+        await env.send(Message(("easytv", "next_channel")))  # 2 - Docs
+        await env.send(Message(("easytv", "goto", "1")))
+        await env.send(Message(("easytv", "next_video")))  # same channel: no snow
+        await env.send(Message(("easytv", "prev_video")))
+        await env.send(EndOfFile())  # end of an episode: no snow
+        await env.send(Message(("easytv", "stop")))
+        await env.send(Message(("easytv", "play")))  # the TV comes on
+
+    env.run(scenario)
+    assert [p for p, _ in env.player.played] == [
+        "1 - Cartoons/ep1.mp4",  # start
+        "2 - Docs/doc1.mp4",
+        "1 - Cartoons/ep1.mp4",
+        "1 - Cartoons/ep2.mp4",
+        "1 - Cartoons/ep1.mp4",
+        "1 - Cartoons/ep2.mp4",
+        "1 - Cartoons/ep2.mp4",  # play after stop
+    ]
+    assert env.player.snowed == [
+        "1 - Cartoons/ep1.mp4",
+        "2 - Docs/doc1.mp4",
+        "1 - Cartoons/ep1.mp4",
+        "1 - Cartoons/ep2.mp4",
+    ]
+
+
+def test_no_snow_when_disabled(env: Env) -> None:
+    env.config = replace(env.config, snow=False)
+
+    async def scenario(app: App) -> None:
+        await env.send(Message(("easytv", "next_channel")))
+        await env.send(Message(("easytv", "stop")))
+        await env.send(Message(("easytv", "play")))
+
+    env.run(scenario)
+    assert len(env.player.played) == 3
+    assert env.player.snowed == []

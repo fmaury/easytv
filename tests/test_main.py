@@ -36,7 +36,7 @@ class ClosingPlayer:
     async def close(self) -> None:
         pass
 
-    async def play(self, path: Path, start: float) -> None:
+    async def play(self, path: Path, start: float, *, snow: bool = False) -> None:
         pass
 
     async def show_banner(

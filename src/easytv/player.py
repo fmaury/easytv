@@ -43,6 +43,8 @@ _STARTED_AFTER = 0.5  # seconds actually played before a video counts as readabl
 # 5 s to start mpv or to answer, and giving up there crashes the TV until systemd restarts it.
 CONNECT_TIMEOUT = 30.0
 COMMAND_TIMEOUT = 20.0
+# TV snow (image and sound) played before a channel; regenerate with scripts/make-snow.sh.
+SNOW = Path(__file__).with_name("snow.mp4")
 
 
 @dataclass(frozen=True)
@@ -87,7 +89,7 @@ class Player(Protocol):
     @property
     def duration(self) -> float | None: ...
 
-    async def play(self, path: Path, start: float) -> None: ...
+    async def play(self, path: Path, start: float, *, snow: bool = False) -> None: ...
 
     async def show_banner(
         self, ass: str, seconds: float | None, layer: Layer = Layer.BANNER
@@ -141,20 +143,25 @@ class MpvPlayer:
         self._audio_track: int | None = None
         self._audio_lost = False
         self._logged: set[str] = set()  # mpv errors already logged for the current video
+        # Video to play once the snow is over, with the play() call it belongs to.
+        self._after_snow: tuple[int, Path, float] | None = None
+        self._generation = 0  # incremented by each play() and stop(): stale snow ends are dropped
+        self._load_lock = asyncio.Lock()  # a load is two commands (start, loadfile): never mixed
+        self._snow_task: asyncio.Task[None] | None = None
 
     @property
     def position(self) -> float | None:
-        return self._position
+        return None if self._after_snow is not None else self._position
 
     @property
     def has_started(self) -> bool:
         """Whether the current video has really played, i.e. is readable."""
-        return self._has_started
+        return self._after_snow is None and self._has_started
 
     @property
     def duration(self) -> float | None:
         """Length of the current video in seconds, once known."""
-        return self._duration
+        return None if self._after_snow is not None else self._duration
 
     @property
     def audio_output(self) -> str | None:
@@ -199,7 +206,29 @@ class MpvPlayer:
         # mpv runs without a terminal: its errors would be lost otherwise.
         await self._command("request_log_messages", "error")
 
-    async def play(self, path: Path, start: float) -> None:
+    async def play(self, path: Path, start: float, *, snow: bool = False) -> None:
+        """Play `path` from `start` seconds, after a short TV snow if `snow`."""
+        self._generation += 1
+        async with self._load_lock:
+            if snow:
+                self._after_snow = (self._generation, path, start)
+                await self._load(SNOW, 0)
+            else:
+                self._after_snow = None
+                await self._load(path, start)
+
+    async def _play_after_snow(self, generation: int, path: Path, start: float) -> None:
+        async with self._load_lock:
+            if generation != self._generation:
+                return  # another play() or stop() came meanwhile
+            self._after_snow = None
+            try:
+                await self._load(path, start)
+            except MpvError as e:
+                logger.error("cannot load %s after the snow: %s", path.name, e)
+                self.events.put_nowait(VideoError(str(e)))
+
+    async def _load(self, path: Path, start: float) -> None:
         self._position = None
         self._duration = None
         self._loading = True
@@ -263,6 +292,8 @@ class MpvPlayer:
         await self._command(overlay)
 
     async def stop(self) -> None:
+        self._generation += 1
+        self._after_snow = None
         self._position = None
         self._duration = None
         await self._command("stop")
@@ -408,6 +439,16 @@ class MpvPlayer:
         entry = message.get("playlist_entry_id")
         if self._entry_id is not None and entry is not None and entry != self._entry_id:
             return  # a file we already replaced
+        if self._after_snow is not None:
+            # Only a snow that ended by itself: "stop" means it was replaced or stopped.
+            if message.get("reason") not in ("eof", "error"):
+                return
+            # The snow is over (or could not play: the TV must not depend on it).
+            if message.get("reason") == "error":
+                logger.warning("snow: %s", message.get("file_error"))
+            generation, path, start = self._after_snow
+            self._snow_task = asyncio.create_task(self._play_after_snow(generation, path, start))
+            return
         match message.get("reason"):
             case "eof":
                 self.events.put_nowait(EndOfFile())

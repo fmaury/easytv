@@ -9,7 +9,8 @@
 4. Installation sur la Pi : `install.sh`, service systemd, README ✅
 5. Télécommande : page web sur téléphone, avec volume, bouton dodo, heure du coucher, barre de
    progression, liste des chaînes ✅
-6. Bonus : effet neige, liste des chaînes sur OK, Samba
+6. Bonus : effet neige ✅ (au changement de chaîne et au rallumage), liste des chaînes sur OK,
+   Samba
 7. Chaîne « mix » : la chaîne 1 est créée automatiquement et mélange au hasard tous les épisodes
    de toutes les chaînes (les autres chaînes sont décalées d'un numéro). À trancher avant de
    commencer :

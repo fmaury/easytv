@@ -12,6 +12,7 @@ from easytv.banner import channel_banner, message_banner, volume_banner
 from easytv.player import (
     COMMAND_TIMEOUT,
     CONNECT_TIMEOUT,
+    SNOW,
     EndOfFile,
     Layer,
     Message,
@@ -269,3 +270,82 @@ def test_an_mpv_that_does_not_answer_is_a_clean_error(tmp_path: Path) -> None:
             await player.close()
 
     asyncio.run(main())
+
+
+# --- Snow --------------------------------------------------------------------
+
+
+async def mpv_path(player: MpvPlayer) -> str | None:
+    try:
+        path = await player._command("get_property", "path")
+    except MpvError:  # nothing loaded
+        return None
+    return str(path)
+
+
+async def wait_path(player: MpvPlayer, expected: Path) -> None:
+    while await mpv_path(player) != str(expected):
+        await asyncio.sleep(0.05)
+
+
+def test_snow_clip_is_short_h264_with_sound() -> None:
+    probe = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "stream=codec_name:format=duration",
+            "-of",
+            "default=noprint_wrappers=1",
+            str(SNOW),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert "codec_name=h264" in probe  # decoded in hardware on the Pi
+    assert "codec_name=aac" in probe
+    duration = float(probe.split("duration=")[1].split()[0])
+    assert 0.5 <= duration <= 1.0
+
+
+def test_snow_then_the_video_from_its_start_position(video: Path) -> None:
+    async def scenario(player: MpvPlayer) -> None:
+        await player.play(video, start=1.0, snow=True)
+        assert await mpv_path(player) == str(SNOW)
+        # While it snows, nothing is reported about the video to come.
+        assert player.position is None
+        assert not player.has_started
+        await wait_path(player, video)
+        assert await wait_position(player, 1.0) >= 1.0
+        assert player.events.empty()  # the end of the snow is not an end of video
+
+    run(scenario)
+
+
+def test_zapping_again_during_the_snow_plays_only_the_last_channel(
+    video: Path, tmp_path: Path
+) -> None:
+    other = tmp_path / "other.mp4"
+    other.write_bytes(video.read_bytes())
+
+    async def scenario(player: MpvPlayer) -> None:
+        await player.play(other, start=0, snow=True)
+        await asyncio.sleep(0.3)
+        await player.play(video, start=0, snow=True)
+        await wait_path(player, video)
+        await asyncio.sleep(1.0)
+        assert await mpv_path(player) == str(video)
+
+    run(scenario)
+
+
+def test_stop_during_the_snow_plays_nothing(video: Path) -> None:
+    async def scenario(player: MpvPlayer) -> None:
+        await player.play(video, start=0, snow=True)
+        await player.stop()
+        await asyncio.sleep(1.5)  # longer than the snow
+        assert await mpv_path(player) is None
+
+    run(scenario)

@@ -129,3 +129,16 @@ def test_invalid_bedtime(tmp_path: Path, value: str) -> None:
     path = write(tmp_path, f'channels_dir = "/tv"\nstate_file = "/s.json"\nbedtime = {value}')
     with pytest.raises(ConfigError, match="bedtime"):
         load_config(path)
+
+
+def test_snow(tmp_path: Path) -> None:
+    base = 'channels_dir = "/tv"\nstate_file = "/s.json"\n'
+    assert load_config(write(tmp_path, base)).snow is True
+    assert load_config(write(tmp_path, base + "snow = false")).snow is False
+
+
+@pytest.mark.parametrize("value", ['"yes"', "1", '""'])
+def test_invalid_snow(tmp_path: Path, value: str) -> None:
+    path = write(tmp_path, f'channels_dir = "/tv"\nstate_file = "/s.json"\nsnow = {value}')
+    with pytest.raises(ConfigError, match="snow"):
+        load_config(path)
