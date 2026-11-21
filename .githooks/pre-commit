@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Git pre-commit hook: protected tests, then ruff, mypy and pytest. Any failure refuses the commit.
+# Enable once per clone: git config core.hooksPath .githooks
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+refuse() {
+    echo "pre-commit: commit refused: $1" >&2
+    exit 1
+}
+
+# --- Protected tests: no test removed, no skip/xfail added (see CLAUDE.md).
+# Bypass, for the user only, after a wanted behavior change: EASYTV_ALLOW_TEST_CHANGES=1 git commit ...
+TEST_DEF='^\s*(async )?def test_'
+sum() { awk '{s += $1} END {print s + 0}'; }
+if [[ "${EASYTV_ALLOW_TEST_CHANGES:-}" != 1 ]] && git rev-parse -q --verify HEAD >/dev/null; then
+    before=$(git grep -h -c -E "$TEST_DEF" HEAD -- 'tests/*.py' | sum)
+    after=$(git grep --cached -h -c -E "$TEST_DEF" -- 'tests/*.py' | sum)
+    if ((after < before)); then
+        refuse "test functions removed ($before -> $after).
+A failing test is fixed in the code, never in the test. If the user asked for this behavior change,
+the user commits with: EASYTV_ALLOW_TEST_CHANGES=1 git commit ..."
+    fi
+    added=$(git diff --cached -U0 -- tests | grep -E '^\+[^+]' |
+        grep -E 'pytest\.(mark\.)?(skip|skipif|xfail)\b|importorskip' || true)
+    if [[ -n "$added" ]]; then
+        refuse "skip/xfail added to the tests:
+$added
+If the user asked for it, the user commits with: EASYTV_ALLOW_TEST_CHANGES=1 git commit ..."
+    fi
+fi
+
+# --- Quality checks (the same as the CLAUDE.md definition of done).
+command -v uv >/dev/null || refuse "uv not found"
+failed=()
+for check in "ruff format --check ." "ruff check ." "mypy" "pytest -q"; do
+    echo "pre-commit: $check" >&2
+    # shellcheck disable=SC2086
+    if ! out=$(uv run --quiet $check 2>&1); then
+        echo "$out" | tail -40 >&2
+        failed+=("$check")
+    fi
+done
+((${#failed[@]} == 0)) || refuse "failed: ${failed[*]}"

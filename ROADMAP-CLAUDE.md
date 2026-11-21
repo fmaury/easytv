@@ -31,7 +31,7 @@ une procédure (déployer, diagnostiquer, regarder une page).
   - la Pi tourne avec le dernier commit ;
   - le diagnostic produit un rapport et une capture de la TV.
 
-## Étape 2 : tests protégés et pre-commit
+## Étape 2 : tests protégés et pre-commit ✅ (2026-11-21)
 
 - **Pourquoi** : pytest doit tourner automatiquement à chaque fin de feature (le commit), et Claude
   ne doit jamais affaiblir un test pour le faire passer.
@@ -45,6 +45,12 @@ une procédure (déployer, diagnostiquer, regarder une page).
   - `.claude/hooks/guard.sh` (PreToolUse sur `Bash`) : interdit à Claude `--no-verify`,
     `git commit -n`, `EASYTV_ALLOW_TEST_CHANGES` et `core.hooksPath`.
   - README, section « Développement » : activation du hook.
+  - Ajouté en cours de route : modifier `.githooks/`, `.claude/hooks/` ou `.claude/settings.json`
+    demande la validation de l'utilisateur (`ask`), pour que Claude ne puisse pas affaiblir les
+    garde-fous eux-mêmes.
+  - Limite connue : le garde lit la commande comme du texte brut. Une commande Bash qui contient
+    seulement le mot (dans un message de commit, par exemple) est bloquée aussi : passer alors par
+    l'outil d'édition de fichiers ou reformuler.
 - **Fini quand** :
   - un commit avec une erreur de type, un test supprimé ou un `xfail` ajouté est refusé ;
   - un `--no-verify` lancé par Claude est bloqué.

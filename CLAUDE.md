@@ -73,6 +73,7 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
 ```bash
 uv run easytv [--config config.toml] [--fullscreen] [--debug]   # lancer la TV
 uv sync                      # dépendances
+git config core.hooksPath .githooks   # une fois par clone : active le pre-commit
 uv run pytest                # tests
 uv run ruff format .         # mise en forme
 uv run ruff check --fix .    # lint
@@ -89,6 +90,7 @@ Essai réel piloté par Claude : config avec `input = "remote"` (et `--vo=null` 
 `easytv.ctl`.
 
 **Une tâche n'est finie que si** `ruff format --check`, `ruff check`, `mypy` et `pytest` passent.
+Le pre-commit (`.githooks/pre-commit`) les relance à chaque commit et refuse le commit en cas d'échec.
 
 ## Conventions de code
 
@@ -96,10 +98,18 @@ Essai réel piloté par Claude : config avec `input = "remote"` (et `--vo=null` 
 - Code, identifiants, commentaires, commits en anglais ; docs utilisateur en français.
 - Tout est typé (mypy strict). Format et lint par ruff (config dans `pyproject.toml`).
   Hooks : ruff après chaque modification de `.py` (`.claude/hooks/ruff.sh`) ; ruff + mypy avant de
-  rendre la main si du Python a changé (`.claude/hooks/check.sh`).
+  rendre la main si du Python a changé (`.claude/hooks/check.sh`). Modifier les hooks ou les
+  réglages demande la validation de l'utilisateur.
 - Logique pure séparée des effets (mpv, entrées, disque, horloge), effets derrière de petites interfaces.
 - `logging`, jamais `print`. Jamais d'`except` muet.
 - Toute nouvelle logique arrive avec ses tests ; les tests ne nécessitent ni Pi ni TV.
+- **Tests protégés** : un test qui échoue se corrige dans le code, jamais dans le test. Sans accord
+  explicite de l'utilisateur, interdit de modifier ou d'affaiblir un test existant (assert retiré,
+  tolérance élargie, `skip`, `xfail`) ou de le supprimer. Seule exception : un changement de
+  comportement demandé par l'utilisateur ; dire alors quels tests changent et pourquoi.
+  Le pre-commit refuse un test supprimé ou un `skip`/`xfail` ajouté ; le contournement
+  `EASYTV_ALLOW_TEST_CHANGES=1` et `--no-verify` sont réservés à l'utilisateur (bloqués par
+  `.claude/hooks/guard.sh`).
 - Commentaires seulement là où le code n'est pas évident. Petits commits ciblés.
 
 ## Raspberry Pi

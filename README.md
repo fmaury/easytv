@@ -214,6 +214,7 @@ EasyTV tourne aussi sur un PC Linux, dans une fenêtre, au clavier (↑/↓ pour
 
 ```bash
 uv sync
+git config core.hooksPath .githooks   # vérifications (ruff, mypy, pytest) avant chaque commit
 cp config.example.toml config.toml   # puis : input = "keyboard", mpv_args = [], channels_dir à adapter
 uv run easytv
 uv run pytest
