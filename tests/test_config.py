@@ -164,3 +164,17 @@ def test_invalid_snow_volume(tmp_path: Path, value: str) -> None:
     path = write(tmp_path, f'channels_dir = "/tv"\nstate_file = "/s.json"\nsnow_volume = {value}')
     with pytest.raises(ConfigError, match="snow_volume"):
         load_config(path)
+
+
+def test_mix(tmp_path: Path) -> None:
+    base = 'channels_dir = "/tv"\nstate_file = "/s.json"\n'
+    assert load_config(write(tmp_path, base)).mix is None
+    assert load_config(write(tmp_path, base + 'mix = ""')).mix is None
+    assert load_config(write(tmp_path, base + 'mix = "Doodingue"')).mix == "Doodingue"
+
+
+@pytest.mark.parametrize("value", ["true", "1", '"a/b"'])
+def test_invalid_mix(tmp_path: Path, value: str) -> None:
+    path = write(tmp_path, f'channels_dir = "/tv"\nstate_file = "/s.json"\nmix = {value}')
+    with pytest.raises(ConfigError, match="mix"):
+        load_config(path)

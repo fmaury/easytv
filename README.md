@@ -111,6 +111,11 @@ Les vidéos vont dans **`/media/tv`**, avec **un sous-dossier par chaîne** :
   Le préfixe `01 - ` fixe l'ordre des chaînes et n'est pas affiché à l'écran.
 - Les dossiers vides et les fichiers qui ne sont pas des vidéos sont ignorés.
 - Les ajouts et suppressions sont pris en compte **en moins de 30 secondes**, sans redémarrer.
+- **La chaîne 1, « Doodingue »**, mélange tous les épisodes de toutes les chaînes. L'ordre est
+  tiré au hasard une fois puis gardé : elle reprend là où on l'a laissée, comme les autres, et un
+  nouvel épisode s'y glisse à un endroit au hasard. Le bandeau dit de quelle chaîne vient
+  l'épisode. Elle n'apparaît qu'à partir de 2 chaînes ; les autres sont donc numérotées à
+  partir de 2.
 
 **Envoyer les fichiers depuis ton PC**, au choix :
 
@@ -189,6 +194,7 @@ modification : `sudo systemctl restart easytv`.
 | `mpv_args` | réglages Pi | Options du lecteur vidéo (décodage matériel, son HDMI) |
 | `web_port` | `80` | Port de la page web de télécommande (`0` la désactive) |
 | `bedtime` | `"00:00"` | Heure à laquelle la TV s'éteint toute seule chaque jour (`""` : jamais) |
+| `mix` | `"Doodingue"` | Nom de la chaîne 1 qui mélange tous les épisodes (`""` : pas de mélange) |
 | `snow` | `true` | Neige (image et son) en changeant de chaîne et en rallumant la TV |
 | `snow_seconds` | `0.4` | Durée de la neige, jusqu'à `2` secondes |
 | `snow_volume` | `100` | Volume du « chhh » de la neige, en % du volume de la TV (`0` : silencieuse) |

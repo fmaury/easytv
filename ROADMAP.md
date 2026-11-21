@@ -11,13 +11,10 @@
    progression, liste des chaînes ✅
 6. Bonus : effet neige ✅ (au changement de chaîne et au rallumage), liste des chaînes sur OK,
    Samba
-7. Chaîne « mix » : la chaîne 1 est créée automatiquement et mélange au hasard tous les épisodes
-   de toutes les chaînes (les autres chaînes sont décalées d'un numéro). À trancher avant de
-   commencer :
-   - ordre aléatoire tiré une fois puis gardé (reprise comme les autres chaînes, règle 3), ou
-     nouveau tirage à chaque tour ;
-   - vidéos ajoutées ou supprimées au rescan : insérées au hasard dans l'ordre en cours ;
-   - nom affiché (« Mix », « Tout »…) ; chaîne présente seulement s'il y a au moins deux chaînes ?
+7. Chaîne mix « Doodingue » ✅ : la chaîne 1 mélange tous les épisodes de toutes les chaînes
+   (les autres sont décalées d'un numéro). Choix faits : mélange tiré une fois puis gardé, avec
+   reprise comme les autres chaînes ; un épisode ajouté s'insère au hasard ; seulement à partir
+   de 2 chaînes ; nom réglable (`mix`, `""` pour s'en passer).
 
 ## Écarté
 

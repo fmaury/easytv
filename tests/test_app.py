@@ -538,3 +538,39 @@ def test_no_snow_when_disabled(env: Env) -> None:
     env.run(scenario)
     assert len(env.player.played) == 3
     assert env.player.snowed == []
+
+
+# --- Mix channel -------------------------------------------------------------
+
+
+def test_mix_is_channel_1_and_plays_videos_of_every_channel(env: Env) -> None:
+    env.config = replace(env.config, mix="Doodingue")
+    statuses: list[Status] = []
+
+    async def scenario(app: App) -> None:
+        statuses.append(app.status())
+        for _ in range(2):
+            await env.send(Message(("easytv", "next_video")))
+        await env.send(Message(("easytv", "next_channel")))
+
+    env.run(scenario)
+    status = statuses[0]
+    assert status.channels == ["Doodingue", "Cartoons", "Docs"]
+    assert status.current == 1
+    mixed = [p for p, _ in env.player.played[:3]]
+    assert sorted(mixed) == ["1 - Cartoons/ep1.mp4", "1 - Cartoons/ep2.mp4", "2 - Docs/doc1.mp4"]
+    assert env.player.played[3] == ("1 - Cartoons/ep1.mp4", 0.0)  # channel 2: Cartoons
+    assert " · " in env.player.banners[0]  # the mix shows where the episode comes from
+
+
+def test_no_mix_with_a_single_channel(env: Env, tmp_path: Path) -> None:
+    env.config = replace(env.config, mix="Doodingue", channels_dir=tmp_path / "one")
+    (tmp_path / "one" / "Only").mkdir(parents=True)
+    (tmp_path / "one" / "Only" / "a.mp4").touch()
+    statuses: list[Status] = []
+
+    async def scenario(app: App) -> None:
+        statuses.append(app.status())
+
+    env.run(scenario)
+    assert statuses[0].channels == ["Only"]

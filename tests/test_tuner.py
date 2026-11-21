@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from easytv.library import Channel
+from easytv.library import Channel, mix
 from easytv.state import ChannelState, TvState
 from easytv.tuner import Playback, Tuner
 
@@ -328,3 +328,21 @@ def test_toggle_mute_keeps_volume() -> None:
     assert (t.state.volume, t.state.muted) == (40, True)
     t.toggle_mute()
     assert (t.state.volume, t.state.muted) == (40, False)
+
+
+# --- Mix channel -------------------------------------------------------------
+
+
+def test_mix_resumes_and_a_vanished_video_gives_the_next_in_mix_order() -> None:
+    m = mix([CARTOONS, DOCS], "Doodingue", ROOT)
+    assert m is not None
+    first, second, third = m.videos[:3]
+    t = tuner(saved(m, second, 12.0, T0), [m, CARTOONS, DOCS])
+    assert t.start(T0 + MINUTE) == Playback("Doodingue", ROOT / second, 12.0)
+
+    # `second` deleted: the mix goes on with the video after it in the mix, not by name.
+    gone = Channel(m.name, m.path, tuple(v for v in m.videos if v != second), shuffled=True)
+    assert t.update_channels([gone, CARTOONS, DOCS], T0 + MINUTE) == Playback(
+        "Doodingue", ROOT / third, 0.0
+    )
+    assert t.prev_video(T0 + MINUTE) == Playback("Doodingue", ROOT / first, 0.0)

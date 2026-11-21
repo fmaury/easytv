@@ -28,6 +28,11 @@ web_port = 80
 # "" pour désactiver.
 bedtime = "00:00"
 
+# Chaîne 1 : tous les épisodes de toutes les chaînes, mélangés (ordre tiré au hasard une fois,
+# puis gardé ; reprise comme les autres chaînes). Seulement à partir de 2 chaînes.
+# "" pour ne pas l'avoir.
+mix = "Doodingue"
+
 # Neige de vieille TV (image et « chhh ») en changeant de chaîne et en rallumant la TV.
 snow = true            # false pour la couper
 snow_seconds = 0.4     # durée de la neige, jusqu'à 2 secondes

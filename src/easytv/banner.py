@@ -22,7 +22,12 @@ def display_name(folder: str) -> str:
 
 
 def video_title(filename: str) -> str:
-    return PurePath(filename).stem.replace("_", " ")
+    """The file name without extension; in the mix channel, preceded by its channel."""
+    path = PurePath(filename)
+    title = path.stem.replace("_", " ")
+    if path.parent.name:
+        return f"{display_name(path.parent.name)} · {title}"
+    return title
 
 
 def escape_ass(text: str) -> str:

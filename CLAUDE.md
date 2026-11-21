@@ -9,6 +9,11 @@ là où on l'a laissée.
 1. **Chaînes** : chaque sous-dossier de `channels_dir` est une chaîne. Chaînes et vidéos sont triées
    par nom, en tri naturel insensible à la casse (`ep2` avant `ep10`) ; préfixer par `01 - `,
    `02 - `… pour fixer l'ordre. Les dossiers vides sont ignorés.
+   **Chaîne mix** (`mix = "Doodingue"` dans le modèle de config ; absente si `mix` vaut `""` ou
+   manque, avec moins de 2 chaînes, ou si un dossier porte ce nom) : chaîne 1, toutes les vidéos
+   de toutes les chaînes (`<dossier>/<fichier>`), dans un ordre aléatoire mais fixe (rang = hash
+   du chemin : stable au rescan et au redémarrage, une vidéo ajoutée s'insère au hasard sans
+   déplacer les autres). Règles 2 à 7 comme une chaîne normale, « suivante » au sens de cet ordre.
 2. **En quittant une chaîne**, on enregistre : vidéo en cours, position, heure de départ.
 3. **En revenant sur une chaîne** :
    - avant `resume_timeout` (1 h par défaut) → même vidéo, même position ;
@@ -41,7 +46,7 @@ Processus Python unique, `asyncio`. Code dans `src/easytv/`, tests dans `tests/`
 | Module | Rôle | Pur ? |
 |---|---|---|
 | `config.py` | Lit `config.toml` → dataclass `Config` | oui |
-| `library.py` | Scanne `channels_dir` → chaînes et vidéos triées | oui (testé avec `tmp_path`) |
+| `library.py` | Scanne `channels_dir` → chaînes et vidéos triées ; chaîne mix | oui (testé avec `tmp_path`) |
 | `state.py` | État (dernière chaîne ; par chaîne : vidéo, position, heure de départ ; volume, son coupé), sauvegarde JSON atomique | oui |
 | `tuner.py` | Zapping, vidéo suivante, rebouclage, règle de reprise, contenu disparu, volume | **oui, cœur testé** |
 | `banner.py` | Bandeau façon TV en ASS (numéro, nom sans préfixe, titre), jauge de volume, messages, écran « dodo » (visage dessiné : pas de police emoji sur la Pi) | oui |

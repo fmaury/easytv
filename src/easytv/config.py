@@ -33,6 +33,7 @@ class Config:
     snow: bool = True  # TV snow when changing channel and when the TV comes on
     snow_seconds: float = 0.4
     snow_volume: int = 100  # loudness of the snow's "shhh", in % of the TV volume
+    mix: str | None = None  # name of channel 1, every video shuffled (None: no mix channel)
 
 
 def load_config(path: Path) -> Config:
@@ -59,6 +60,7 @@ def load_config(path: Path) -> Config:
         snow=_bool(data, "snow", defaults.snow),
         snow_seconds=_snow_seconds(data, defaults.snow_seconds),
         snow_volume=_percent(data, "snow_volume", defaults.snow_volume),
+        mix=_mix(data),
     )
 
 
@@ -134,6 +136,13 @@ def _percent(data: dict[str, Any], key: str, default: int) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 100:
         raise ConfigError(f"{key} must be a whole number from 0 to 100")
     return value
+
+
+def _mix(data: dict[str, Any]) -> str | None:
+    value = data.get("mix", "")
+    if not isinstance(value, str) or "/" in value:
+        raise ConfigError('mix must be a channel name, or "" for no mix channel')
+    return value.strip() or None
 
 
 def _bedtime(data: dict[str, Any]) -> time | None:

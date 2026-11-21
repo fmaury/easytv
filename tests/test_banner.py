@@ -83,3 +83,7 @@ def test_bedtime_screen_has_its_own_text() -> None:
     screen = sleep_screen(BEDTIME_TITLE, BEDTIME_SUBTITLE)
     assert BEDTIME_TITLE in screen
     assert SLEEP_TITLE not in screen
+
+
+def test_video_title_in_the_mix_names_its_channel() -> None:
+    assert video_title("01 - Pingu/02 - Pingu helps.avi") == "Pingu · 02 - Pingu helps"

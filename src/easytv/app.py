@@ -18,7 +18,7 @@ from easytv.banner import (
 )
 from easytv.bedtime import bedtime_reached
 from easytv.config import Config
-from easytv.library import Channel, scan
+from easytv.library import Channel, mix, scan
 from easytv.player import Closed, EndOfFile, Layer, Message, Player, PlayerEvent, VideoError
 from easytv.remote import Action, Command, parse_message
 from easytv.state import load_state, save_state
@@ -263,7 +263,7 @@ class App:
         logger.info(
             "playing %s / %s from %.1fs",
             playback.channel,
-            playback.video_path.name,
+            self._tuner.state.channels[playback.channel].video,  # "<folder>/<file>" in the mix
             playback.start,
         )
         await self._player.play(
@@ -296,7 +296,12 @@ class App:
         return f"{channel.name}/{self._tuner.state.channels[channel.name].video}"
 
     def _scan(self) -> list[Channel]:
-        return scan(self._config.channels_dir, self._config.video_extensions)
+        channels = scan(self._config.channels_dir, self._config.video_extensions)
+        if self._config.mix is not None:
+            shuffled = mix(channels, self._config.mix, self._config.channels_dir)
+            if shuffled is not None:
+                return [shuffled, *channels]
+        return channels
 
     @staticmethod
     async def _every(seconds: float, action: Callable[[], Awaitable[None]]) -> None:

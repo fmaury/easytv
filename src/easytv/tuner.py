@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from easytv.library import Channel, sort_key
+from easytv.library import Channel
 from easytv.state import MAX_VOLUME, ChannelState, TvState
 
 
@@ -171,11 +171,11 @@ class Tuner:
 
 def _next_after(channel: Channel, missing: str) -> str:
     """The video sorting right after a vanished one, wrapping to the first."""
-    key = sort_key(missing)
-    return next((v for v in channel.videos if sort_key(v) > key), channel.videos[0])
+    key = channel.key(missing)
+    return next((v for v in channel.videos if channel.key(v) > key), channel.videos[0])
 
 
 def _prev_before(channel: Channel, missing: str) -> str:
     """The video sorting right before a vanished one, wrapping to the last."""
-    key = sort_key(missing)
-    return next((v for v in reversed(channel.videos) if sort_key(v) < key), channel.videos[-1])
+    key = channel.key(missing)
+    return next((v for v in reversed(channel.videos) if channel.key(v) < key), channel.videos[-1])
