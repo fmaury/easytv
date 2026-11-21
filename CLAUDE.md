@@ -112,5 +112,6 @@ Essai réel piloté par Claude : config avec `input = "remote"` (et `--vo=null` 
 ## Feuille de route
 
 `ROADMAP.md`, à mettre à jour à chaque étape terminée.
+Config Claude (règles, hooks, skills, agents) : `ROADMAP-CLAUDE.md`, une étape à la fois.
 Écarté, à ne pas reproposer : CEC (la TCL ne transmet aucune touche), télécommande physique,
 conversion automatique des vidéos.

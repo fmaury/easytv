@@ -220,4 +220,4 @@ uv run pytest
 ```
 
 Architecture, règles de comportement et conventions : voir [`CLAUDE.md`](CLAUDE.md) ;
-feuille de route : [`ROADMAP.md`](ROADMAP.md).
+feuilles de route : [`ROADMAP.md`](ROADMAP.md) et [`ROADMAP-CLAUDE.md`](ROADMAP-CLAUDE.md).
