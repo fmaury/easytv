@@ -26,24 +26,40 @@ environ et envoie les boutons à `/api/command`.
   - `start` : état neuf, 3 chaînes de test (`Dessins animés`, `Documentaires`, `Films`, 2 épisodes
     chacune), EasyTV dans une petite fenêtre mpv, page sur `http://localhost:8765/` ;
   - `mpv` : ce que mpv joue vraiment (`path`, `volume`, `mute`, `idle-active`) ;
-  - `tv <nom>` : capture de l'écran de la TV **avec le bandeau** → `.remote-test/shots/tv-<nom>.png` ;
+  - `tv <nom>` : capture de l'écran de la TV → `.remote-test/shots/tv-<nom>.png` (marche aussi TV
+    éteinte) ;
+  - `arm <nom>` : **le bandeau ne reste que 4 s**, trop court pour cliquer puis capturer. Lance
+    `arm` juste **avant** le clic : il prend une rafale de captures en arrière-plan
+    (`tv-<nom>-1.png` à `-12.png`, ~10 s). Clique aussitôt, attends ~10 s, puis regarde les
+    captures dans l'ordre jusqu'à trouver le bandeau (en général entre la 2 et la 5) ;
   - `stop`.
 - Navigateur : les outils `mcp__playwright__*` (Chromium en émulation Pixel 7). Pour économiser,
-  préfère les snapshots texte de la page ; prends une capture d'image seulement là où c'est
-  indiqué, en l'enregistrant avec un nom parlant (`page-<nom>.png`).
+  préfère les snapshots texte de la page. Prends une capture d'image seulement là où c'est
+  indiqué, **toujours avec le chemin complet** `.remote-test/browser/page-<nom>.png` (un nom seul
+  atterrit à la racine du dépôt).
+- Boutons, par leur nom d'accessibilité (les refs `e…` des snapshots changent quand la page se
+  met à jour : clique par nom ou reprends un snapshot) : « Chaîne suivante » ▲, « Chaîne
+  précédente » ▼, « Liste des chaînes » ☰, « Fermer » ✕, « Vidéo suivante », « Vidéo précédente »,
+  « Monter le son » +, « Baisser le son » −, « Couper ou remettre le son », « Infos sur la TV » i,
+  « Éteindre » 😴 / « Allumer » 📺.
 - `Read` sur une capture `.png` pour la regarder.
+- **Jamais de capture de tout le bureau** (`import -window root`, etc.) : elle exposerait l'écran
+  de l'utilisateur. Seulement les outils ci-dessus.
 
 ## Déroulé
 
 Après chaque clic, attends ~1,5 s (rafraîchissement de la page), puis vérifie **trois choses** :
 mpv (`remote-test.sh mpv`), la page (snapshot) et, quand c'est indiqué, la TV (`remote-test.sh tv`).
 État de départ : chaîne 1 `Dessins animés`, `Épisode 1`, volume 100, son actif.
+Normal, pas un défaut : en revenant sur une chaîne quittée depuis moins d'une heure, la vidéo
+reprend à la position quittée (règle de reprise) ; la position affichée après un zapping n'est
+donc pas forcément ~0:00.
 
 1. `remote-test.sh start`, puis ouvrir `http://localhost:8765/`.
    Page : numéro 1, `Dessins animés`, `Épisode 1`, `Volume 100`, barre de progression qui avance
    (deux snapshots à quelques secondes d'écart). Capture `page-initial`, TV `initial`.
-2. **▲ Chaîne suivante** → mpv `02 - Documentaires/Épisode 1.mp4`, page n° 2. TV `chaine-suivante`
-   (bandeau « 2 Documentaires »).
+2. `arm chaine-suivante`, puis **▲ Chaîne suivante** → mpv `02 - Documentaires/Épisode 1.mp4`,
+   page n° 2, bandeau « 2 Documentaires » dans la rafale.
 3. **▼ Chaîne précédente** → chaîne 1. **▼** encore → chaîne 3 `Films` (rebouclage).
 4. **☰ Liste des chaînes** → la liste s'ouvre avec les 3 chaînes, la 3 marquée comme en cours.
    Capture `page-liste`. Cliquer `Dessins animés` → chaîne 1. La liste se referme-t-elle ?
@@ -53,7 +69,7 @@ mpv (`remote-test.sh mpv`), la page (snapshot) et, quand c'est indiqué, la TV (
    **+ Monter le son** → 100.
 7. **Couper le son** → mpv `mute=true`, page `Son coupé`, bouton « Remettre », jauge vide.
    Capture `page-muet`. Recliquer → son revenu.
-8. **i Infos** → la TV affiche le bandeau : TV `infos`. Rien ne change dans mpv.
+8. `arm infos`, puis **i Infos** → bandeau dans la rafale. Rien ne change dans mpv.
 9. **😴 Éteindre** → mpv `idle-active=true` sans `path`, la page affiche le message de veille et
    le bouton devient 📺 « Allumer ». Capture `page-eteinte`, TV `eteinte` (écran « dodo »).
    **📺 Allumer** → la lecture reprend sur la chaîne 1 (`Épisode 1`), le bouton redevient 😴.

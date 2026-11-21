@@ -3,13 +3,25 @@
 #   start          fresh state, 3 test channels, EasyTV in a small mpv window, waits for the page
 #   stop           stops it
 #   tv <name>      screenshot of the TV with the banner → .remote-test/shots/tv-<name>.png
+#   arm <name>     burst of TV screenshots for ~6 s in the background (tv-<name>-1..12.png):
+#                  run it just BEFORE clicking, the banner only stays 4 s
 #   mpv            channel/video, volume and mute as mpv sees them
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 dir="$PWD/.remote-test"
 port=${EASYTV_TEST_PORT:-8765}
 config="$dir/config.toml"
-ctl() { uv run --quiet python -m easytv.ctl --socket "$(cat "$dir/socket")" "$@"; }
+title=easytv-remote-test
+ctl() { "$PWD/.venv/bin/python" -m easytv.ctl --socket "$(cat "$dir/socket")" "$@"; }
+
+# mpv renders its own screenshot (exact, with the banner) but refuses while no video plays (TV
+# off): then capture its window only (never the whole desktop), found by its fixed title.
+shot() {
+    if ! ctl cmd screenshot-to-file "$1" window >/dev/null 2>&1; then
+        id=$(xwininfo -name "$title" 2>/dev/null | awk '/Window id:/ {print $4}')
+        [[ -n "$id" ]] && import -window "$id" "$1"
+    fi
+}
 
 case "${1:-}" in
 start)
@@ -31,7 +43,7 @@ channels_dir = "$dir/channels"
 input = "remote"
 state_file = "$dir/state.json"
 web_port = $port
-mpv_args = ["--ao=null", "--geometry=640x360"]
+mpv_args = ["--ao=null", "--geometry=640x360", "--title=$title"]
 TOML
     before=$(ls -d /tmp/easytv-* 2>/dev/null || true)
     nohup uv run easytv --config "$config" >"$dir/easytv.log" 2>&1 &
@@ -55,9 +67,20 @@ stop)
     pkill -f "[e]asytv --config $config" && echo "stopped" || echo "not running"
     ;;
 tv)
-    ctl cmd screenshot-to-file "$dir/shots/tv-${2:?name}.png" window >/dev/null
+    shot "$dir/shots/tv-${2:?name}.png"
     sleep 1.5  # mpv writes the file asynchronously
     echo "$dir/shots/tv-$2.png"
+    ;;
+arm)
+    rm -f "$dir/shots/tv-${2:?name}"-*.png
+    nohup "$0" burst "$2" >/dev/null 2>&1 &
+    echo "capturing $dir/shots/tv-$2-1..12.png for ~6 s: click now"
+    ;;
+burst) # internal, see arm
+    for i in $(seq 12); do
+        shot "$dir/shots/tv-$2-$i.png"
+        sleep 0.5
+    done
     ;;
 mpv)
     # No path while the TV is off: not an error here.

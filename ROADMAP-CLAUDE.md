@@ -76,7 +76,7 @@ une procédure (déployer, diagnostiquer, regarder une page).
 - **Ce qui reste hors champ** : les vrais clics JavaScript et l'affichage (étape 4), l'image réelle
   et la Pi.
 
-## Étape 4 : agent `remote-tester` (navigateur Playwright)
+## Étape 4 : agent `remote-tester` (navigateur Playwright) ✅ (2026-11-21)
 
 - **Pourquoi** : le JavaScript de `web.html` et la mise en page sur téléphone ne sont pas testés
   (l'étape 3 envoie les commandes directement à l'API). Juger un rendu demande des yeux : bouton
@@ -107,6 +107,17 @@ une procédure (déployer, diagnostiquer, regarder une page).
 - **À vérifier en le mettant en place** : la déclaration d'un MCP propre à un agent dans la
   version actuelle de Claude Code (sinon : `.mcp.json` de projet).
 - **Fini quand** : l'agent a tourné une fois, en vrai, et rendu son rapport avec les captures.
+- **Résultat du premier essai** : 12 boutons OK / 0 KO, aucun défaut de mise en page (pas de
+  défilement horizontal en 412 px). Ses retours ont corrigé ses propres outils :
+  - le bandeau ne reste que 4 s : la capture arrivait après → `remote-test.sh arm`, rafale de
+    captures lancée juste avant le clic ;
+  - mpv refuse de capturer sans vidéo (TV éteinte) → capture de la seule fenêtre mpv, par son
+    titre ; interdiction de capturer tout le bureau (l'agent l'avait fait en dépannage) ;
+  - noms des boutons, chemins des captures Playwright, reprise de position à ne pas prendre pour
+    un bug : précisés dans ses consignes.
+  - Seule la capture mpv en mode `window` montre le bandeau : `/pi-diagnose` et `pi.md` corrigés.
+- **Mise en place** : un dossier `.claude/agents/` créé en cours de session n'est vu qu'après un
+  redémarrage de Claude Code.
 
 ## Comment les agents se lancent
 
