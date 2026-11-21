@@ -71,8 +71,8 @@ SSH HOST 'date "+%F %T"; cd ~/easytv && ./install.sh'
 ```
 
 Noter l'heure affichée (`SINCE`). Plusieurs minutes sur une Pi 3 (paquets, uv, dépendances) :
-timeout long (10 min). Relever dans la sortie : le nom (`raspberrypi → easytv` ou conservé), la sortie son HDMI détectée, « EasyTV
-tourne » (vérifié seulement 3 s après le lancement : la vérification de l'étape 5 fait foi).
+timeout long (10 min). Relever dans la sortie : le nom (`raspberrypi → easytv` ou conservé), la
+sortie son HDMI détectée, « EasyTV tourne » ou « a planté puis redémarré » (surveillé 15 s).
 En cas d'échec : montrer l'erreur, ne rien forcer, puis `pi-diagnose` si utile.
 
 ## 5. Vérifier (~20 s après la fin d'`install.sh`)

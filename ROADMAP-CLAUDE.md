@@ -34,6 +34,7 @@ une procédure (déployer, diagnostiquer, regarder une page).
      `easytv.local`, lecture en `v4l2m2m-copy`. Trouvé : EasyTV plante au premier lancement quand
      la Pi est chargée (démarrage, fin d'`install.sh`) car mpv met plus de 5 s à répondre ;
      systemd le relance 3 s après. Skill corrigée (journal depuis l'installation, `NRestarts`) ;
+     code corrigé (délais mpv 30 s / 20 s, erreur propre) et `install.sh` surveille 15 s ;
   5. `/pi-diagnose` ;
   6. corriger les skills d'après ce qui coince.
 - **Fini quand** :

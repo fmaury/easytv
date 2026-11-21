@@ -115,11 +115,17 @@ fi
 # --- 10. Lancement ------------------------------------------------------------
 step "Lancement d'EasyTV"
 sudo systemctl restart easytv
+# A crash can come several seconds after the start: watch for 15 s, and notice a restart.
+info "Vérification (15 s)…"
 sleep 3
-if systemctl is-active --quiet easytv; then
-    info "EasyTV tourne."
-else
+pid="$(systemctl show -p MainPID --value easytv)"
+sleep 12
+if ! systemctl is-active --quiet easytv; then
     fail "le service ne démarre pas. Voir : journalctl -u easytv -n 50"
+elif [[ "$(systemctl show -p MainPID --value easytv)" != "$pid" ]]; then
+    info "Attention : EasyTV a planté puis redémarré. Voir : journalctl -u easytv -n 50"
+else
+    info "EasyTV tourne."
 fi
 
 cat <<EOF
