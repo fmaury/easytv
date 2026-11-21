@@ -10,6 +10,13 @@
 5. Télécommande : page web sur téléphone, avec volume, bouton dodo, heure du coucher, barre de
    progression, liste des chaînes ✅
 6. Bonus : effet neige, liste des chaînes sur OK, Samba
+7. Chaîne « mix » : la chaîne 1 est créée automatiquement et mélange au hasard tous les épisodes
+   de toutes les chaînes (les autres chaînes sont décalées d'un numéro). À trancher avant de
+   commencer :
+   - ordre aléatoire tiré une fois puis gardé (reprise comme les autres chaînes, règle 3), ou
+     nouveau tirage à chaque tour ;
+   - vidéos ajoutées ou supprimées au rescan : insérées au hasard dans l'ordre en cours ;
+   - nom affiché (« Mix », « Tout »…) ; chaîne présente seulement s'il y a au moins deux chaînes ?
 
 ## Écarté
 
