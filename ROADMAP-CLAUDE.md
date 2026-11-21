@@ -29,6 +29,11 @@ une procédure (déployer, diagnostiquer, regarder une page).
      n'existe qu'après `install.sh`) ;
   4. test de bout en bout : effacer EasyTV de la Pi (périmètre décidé avec l'utilisateur, nom
      remis à `raspberrypi`), `/pi-setup utilisateur@ip`, puis `/pi-deploy` ;
+     ✅ `/pi-setup` (2026-11-21) : EasyTV, service, état, uv, mpv, git et v4l-utils effacés, nom
+     `raspberrypi` et bureau remis (vidéos et curl gardés) ; réinstallé par la skill, répond sur
+     `easytv.local`, lecture en `v4l2m2m-copy`. Trouvé : EasyTV plante au premier lancement quand
+     la Pi est chargée (démarrage, fin d'`install.sh`) car mpv met plus de 5 s à répondre ;
+     systemd le relance 3 s après. Skill corrigée (journal depuis l'installation, `NRestarts`) ;
   5. `/pi-diagnose` ;
   6. corriger les skills d'après ce qui coince.
 - **Fini quand** :

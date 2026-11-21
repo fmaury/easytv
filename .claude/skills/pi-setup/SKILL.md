@@ -67,27 +67,34 @@ SSH HOST 'git clone -q https://github.com/fmaury/easytv.git ~/easytv && git -C ~
 ## 4. Installer
 
 ```bash
-SSH HOST 'cd ~/easytv && ./install.sh'
+SSH HOST 'date "+%F %T"; cd ~/easytv && ./install.sh'
 ```
 
-Plusieurs minutes sur une Pi 3 (paquets, uv, dépendances) : timeout long (10 min). Relever dans la
-sortie : le nom (`raspberrypi → easytv` ou conservé), la sortie son HDMI détectée, « EasyTV
-tourne ». En cas d'échec : montrer l'erreur, ne rien forcer, puis `pi-diagnose` si utile.
+Noter l'heure affichée (`SINCE`). Plusieurs minutes sur une Pi 3 (paquets, uv, dépendances) :
+timeout long (10 min). Relever dans la sortie : le nom (`raspberrypi → easytv` ou conservé), la sortie son HDMI détectée, « EasyTV
+tourne » (vérifié seulement 3 s après le lancement : la vérification de l'étape 5 fait foi).
+En cas d'échec : montrer l'erreur, ne rien forcer, puis `pi-diagnose` si utile.
 
-## 5. Vérifier
+## 5. Vérifier (~20 s après la fin d'`install.sh`)
 
 Si la Pi a été renommée, passer par le nouveau nom (c'est aussi le test que `easytv.local`
 répond) ; sinon rester sur `HOST` :
 
 ```bash
-SSH UTILISATEUR@easytv.local 'hostname; systemctl get-default; systemctl is-active easytv; systemctl show easytv -p ActiveEnterTimestamp -p NRestarts; journalctl -u easytv -b -p warning --no-pager -o cat | tail -20; ls /media/tv; CTL get idle-active hwdec-current'
+SSH UTILISATEUR@easytv.local 'hostname; systemctl get-default; systemctl is-active easytv; systemctl show easytv -p ActiveEnterTimestamp -p NRestarts; journalctl -u easytv --since "SINCE" -p warning --no-pager -o cat | tail -20; ls /media/tv; CTL get idle-active path hwdec-current'
 ```
 
 Attendu :
 - `easytv`, `multi-user.target`, `active`, `NRestarts=0` ;
-- aucun avertissement, et surtout pas « Failed to commit atomic request » (écran noir, `pi.md`) ;
-- `/media/tv` vide sur une installation neuve : la TV affiche « Aucune chaîne », et mpv n'a pas de
-  vidéo (`idle-active=true`) : c'est normal.
+- aucun avertissement (seul « Can't open TTY for VT control » est normal), et surtout pas
+  « Failed to commit atomic request » (écran noir, `pi.md`) ;
+- `/media/tv` vide (Pi neuve) : la TV affiche « Aucune chaîne », `idle-active=true` sans `path` ;
+  `/media/tv` avec des chaînes (vidéos gardées) : `path` présent et
+  `hwdec-current=v4l2m2m-copy`.
+
+`NRestarts` > 0 ou « Failed » : EasyTV a planté puis systemd l'a relancé. Lire tout le journal
+depuis `SINCE` (`journalctl -u easytv --since "SINCE" --no-pager -o short-iso`, sans `-p`) pour
+trouver la trace d'erreur, et la signaler même si le service tourne à nouveau.
 
 Si `easytv.local` ne répond pas (mDNS bloqué par la box, avahi pas encore relancé) : continuer
 avec l'IP et le signaler. L'IP marche partout, y compris pour la télécommande (`http://<ip>`).
