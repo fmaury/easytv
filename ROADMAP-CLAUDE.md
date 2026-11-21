@@ -102,24 +102,53 @@ une procédure (déployer, diagnostiquer, regarder une page).
   - Outils : terminal (EasyTV, `easytv.ctl`), lecture de fichiers, Playwright. Aucune
     modification du code : il constate, la correction se fait ensuite dans la conversation
     principale.
-  - Lancement : « teste la télécommande », ou par Claude après une modification de la page ou du
-    bandeau.
+  - Lancement : voir « Comment les agents se lancent » ci-dessous. Ligne à ajouter dans
+    `CLAUDE.md` : « page (`web.html`) ou bandeau (`banner.py`) modifié → lancer `remote-tester` ».
 - **À vérifier en le mettant en place** : la déclaration d'un MCP propre à un agent dans la
   version actuelle de Claude Code (sinon : `.mcp.json` de projet).
 - **Fini quand** : l'agent a tourné une fois, en vrai, et rendu son rapport avec les captures.
 
-## Étape 5 (optionnelle) : agent « nouvel utilisateur »
+## Comment les agents se lancent
 
-- **Pourquoi** : un regard neuf, sans le contexte des conversations passées, sur le README et la
-  page. Un agent (`.claude/agents/*.md`) travaille dans sa propre conversation, avec ses consignes
-  et ses outils, puis rend un rapport. Son avis reste celui d'une IA, pas d'un vrai utilisateur.
-- **Quoi** : `.claude/agents/nouvel-utilisateur.md`.
-  - Consigne : jouer quelqu'un qui découvre EasyTV, suivre le README et utiliser la page, puis
-    rapporter où il bloque et ce qui est confus.
-  - Outils en lecture seule et navigateur.
+Un agent (`.claude/agents/*.md`) n'est pas une skill : c'est un assistant à part, avec ses
+consignes et ses outils, qui travaille dans sa propre conversation (éventuellement en
+arrière-plan) et rend un rapport, que Claude transmet. Un seul travail par agent. Il ne coûte
+rien quand il ne tourne pas. Trois façons de le lancer :
+
+1. **Claude le lance quand la tâche correspond** à sa `description` (renforcé par une ligne dans
+   `CLAUDE.md`).
+2. **L'utilisateur le demande** : « teste les boutons », « vérifie le README », ou en le nommant
+   (`@agent-remote-tester`).
+3. **Par une skill**, seulement si une commande `/…` est voulue : une skill peut s'exécuter dans
+   un agent (`/test-boutons` → `remote-tester`).
+
+## Étape 5 : agent `readme-tester`
+
+- **Pourquoi** : un regard neuf, sans le contexte des conversations passées. Son avis reste celui
+  d'une IA, pas d'un vrai utilisateur.
+- **Quoi** : `.claude/agents/readme-tester.md`.
+  - Consigne : jouer quelqu'un qui découvre EasyTV, lire tout le README, **exécuter pour de vrai**
+    la partie « Développement » sur le PC (lancer EasyTV en local) en ne suivant que le README.
+  - Rapport : ce qui l'a bloqué, ce qu'il a dû deviner, ce qui est confus ou manquant.
+  - Outils : terminal et lecture de fichiers. Aucune modification : les corrections du README
+    se font ensuite dans la conversation principale.
 - **Fini quand** : un premier rapport est produit et ses retours sont triés avec l'utilisateur.
 
-## Étape 6 (optionnelle) : CI GitHub Actions
+## Étape 6 (optionnelle) : agent `install-tester`
+
+- **Pourquoi** : vérifier le guide d'installation sur la Pi sans Pi.
+- **Quoi** : `.claude/agents/install-tester.md`.
+  - Relire `install.sh` et la partie Pi du README : disent-ils la même chose ?
+  - Passer `install.sh` à shellcheck (vérificateur de scripts bash).
+  - Éventuellement, lancer `install.sh` dans un Debian jetable (Docker est sur le PC), pour
+    attraper un paquet introuvable ou une erreur de syntaxe.
+  - Rapport, sans modification.
+- **Limite** : il ne reproduit pas la Pi. Pas d'ARM, de HDMI, de son, de `systemctl` réel ni de
+  renommage de la machine. Le vrai test d'installation reste la Pi, que `/deploy-pi` exerce quand
+  `install.sh` change.
+- **Fini quand** : un premier rapport est produit et trié avec l'utilisateur.
+
+## Étape 7 (optionnelle) : CI GitHub Actions
 
 - **Pourquoi** : un témoin indépendant du PC. Il repart d'un clone propre, ce qui attrape un
   fichier oublié dans un commit ou une dépendance absente de `uv.lock` (le pre-commit, lui, teste
