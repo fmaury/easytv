@@ -18,7 +18,7 @@ une procédure (déployer, diagnostiquer, regarder une page).
 - Hook Stop : ruff + mypy avant que Claude rende la main, si du Python a changé.
 - Outil `python -m easytv.ctl` : interroger et piloter la TV en marche par la socket mpv.
 
-## Étape 1 : valider l'étape 0 en vrai
+## Étape 1 : valider l'étape 0 en vrai ✅ (2026-11-21)
 
 - **Pourquoi** : les skills et la validation SSH n'ont jamais tourné sur la Pi.
 - **Quoi** :
@@ -35,8 +35,11 @@ une procédure (déployer, diagnostiquer, regarder une page).
      la Pi est chargée (démarrage, fin d'`install.sh`) car mpv met plus de 5 s à répondre ;
      systemd le relance 3 s après. Skill corrigée (journal depuis l'installation, `NRestarts`) ;
      code corrigé (délais mpv 30 s / 20 s, erreur propre) et `install.sh` surveille 15 s ;
-  5. `/pi-diagnose` ;
-  6. corriger les skills d'après ce qui coince.
+  5. `/pi-deploy` ✅ (`5b6c009` par `install.sh`, sa surveillance de 15 s vue en vrai) puis
+     `/pi-diagnose` ✅ : service sans redémarrage, 50 °C, alimentation OK, NTP OK, capture de la TV
+     correcte. Trouvé : `easytv.ctl` abandonnait la capture au bout de 5 s (PNG 1080p plus lent sur
+     la Pi 3) → délai 30 s, captures en `.jpg` ;
+  6. corriger les skills d'après ce qui coince ✅ (voir 4 et 5).
 - **Fini quand** :
   - chaque `ssh` a demandé une validation ;
   - une Pi effacée est réinstallée par `/pi-setup` et répond sur `easytv.local` ;
