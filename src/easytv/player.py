@@ -39,8 +39,10 @@ _AUDIO_OUTPUT_ID = 2
 _AUDIO_TRACK_ID = 3
 _DURATION_ID = 4
 _STARTED_AFTER = 0.5  # seconds actually played before a video counts as readable
-_CONNECT_TIMEOUT = 5.0
-_COMMAND_TIMEOUT = 5.0
+# Generous: a busy Pi 3 (boot, desktop handing over the screen, SD card trim) can take more than
+# 5 s to start mpv or to answer, and giving up there crashes the TV until systemd restarts it.
+CONNECT_TIMEOUT = 30.0
+COMMAND_TIMEOUT = 20.0
 
 
 @dataclass(frozen=True)
@@ -106,9 +108,19 @@ class MpvPlayer:
     """Drives an mpv process through its JSON IPC socket."""
 
     def __init__(
-        self, *, keyboard: bool, fullscreen: bool = False, extra_args: Sequence[str] = ()
+        self,
+        *,
+        keyboard: bool,
+        fullscreen: bool = False,
+        extra_args: Sequence[str] = (),
+        mpv: str = "mpv",
+        connect_timeout: float = CONNECT_TIMEOUT,
+        command_timeout: float = COMMAND_TIMEOUT,
     ) -> None:
         self.events: asyncio.Queue[PlayerEvent] = asyncio.Queue()
+        self._mpv = mpv
+        self._connect_timeout = connect_timeout
+        self._command_timeout = command_timeout
         self._keyboard = keyboard
         self._fullscreen = fullscreen
         self._extra_args = list(extra_args)
@@ -154,7 +166,7 @@ class MpvPlayer:
         tmp = Path(self._tmp.name)
         socket = tmp / "mpv.sock"
         args = [
-            "mpv",
+            self._mpv,
             "--idle=yes",
             "--force-window=yes",
             f"--input-ipc-server={socket}",
@@ -280,7 +292,7 @@ class MpvPlayer:
 
     async def _connect(self, socket: Path) -> asyncio.StreamReader:
         loop = asyncio.get_running_loop()
-        deadline = loop.time() + _CONNECT_TIMEOUT
+        deadline = loop.time() + self._connect_timeout
         while True:
             try:
                 reader, self._writer = await asyncio.open_unix_connection(str(socket))
@@ -306,7 +318,11 @@ class MpvPlayer:
         self._writer.write(json.dumps(payload).encode() + b"\n")
         try:
             await self._writer.drain()
-            return await asyncio.wait_for(future, timeout=_COMMAND_TIMEOUT)
+            return await asyncio.wait_for(future, timeout=self._command_timeout)
+        except TimeoutError:
+            raise MpvError(
+                f"mpv did not answer {command} within {self._command_timeout:g} s"
+            ) from None
         finally:
             self._pending.pop(request_id, None)
 

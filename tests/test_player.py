@@ -1,13 +1,25 @@
 import asyncio
 import logging
+import shutil
 import subprocess
+import sys
 from collections.abc import Awaitable, Callable, Sequence
 from pathlib import Path
 
 import pytest
 
 from easytv.banner import channel_banner, message_banner, volume_banner
-from easytv.player import EndOfFile, Layer, Message, MpvPlayer, PlayerEvent, VideoError
+from easytv.player import (
+    COMMAND_TIMEOUT,
+    CONNECT_TIMEOUT,
+    EndOfFile,
+    Layer,
+    Message,
+    MpvError,
+    MpvPlayer,
+    PlayerEvent,
+    VideoError,
+)
 
 
 @pytest.fixture(scope="module")
@@ -172,3 +184,88 @@ def test_sound_comes_back_after_the_audio_output_failed(
     run(scenario, audio=["--ao=alsa", "--audio-device=alsa/easytv_test"])
     assert "Could not open/initialize audio device" in caplog.text
     assert "sound is back" in caplog.text
+
+
+# An mpv that opens its IPC socket but never answers, except to quit.
+SILENT_MPV = """\
+import socket, sys
+path = next(a.split("=", 1)[1] for a in sys.argv if a.startswith("--input-ipc-server="))
+server = socket.socket(socket.AF_UNIX)
+server.bind(path)
+server.listen()
+connection, _ = server.accept()
+for line in connection.makefile("rb"):
+    if b'"quit"' in line:
+        break
+"""
+
+
+def fake_mpv(tmp_path: Path, body: str) -> str:
+    script = tmp_path / "mpv"
+    script.write_text(body, encoding="utf-8")
+    script.chmod(0o755)
+    return str(script)
+
+
+def slow_mpv(tmp_path: Path, delay: float) -> str:
+    real = shutil.which("mpv")
+    assert real is not None
+    return fake_mpv(tmp_path, f'#!/bin/sh\nsleep {delay}\nexec {real} "$@"\n')
+
+
+def test_default_timeouts_leave_room_for_a_busy_pi() -> None:
+    # Measured on a Pi 3 (2026-11-21): no IPC socket after 5 s at boot, mpv silent for ~10 s
+    # while the desktop handed the screen over; both crashed the TV with 5 s timeouts.
+    assert CONNECT_TIMEOUT >= 30
+    assert COMMAND_TIMEOUT >= 20
+
+
+def test_waits_for_an_mpv_that_is_slow_to_start(tmp_path: Path) -> None:
+    async def main() -> None:
+        player = MpvPlayer(
+            keyboard=False,
+            extra_args=["--vo=null", "--ao=null", "--force-window=no"],
+            mpv=slow_mpv(tmp_path, 1.0),
+            connect_timeout=5,
+        )
+        try:
+            await player.start()
+            await player.set_volume(50, muted=False)
+        finally:
+            await player.close()
+
+    asyncio.run(main())
+
+
+def test_an_mpv_too_slow_to_start_is_a_clean_error(tmp_path: Path) -> None:
+    async def main() -> None:
+        player = MpvPlayer(
+            keyboard=False,
+            extra_args=["--vo=null", "--ao=null", "--force-window=no"],
+            mpv=slow_mpv(tmp_path, 2.0),
+            connect_timeout=0.3,
+        )
+        try:
+            with pytest.raises(MpvError, match="IPC socket"):
+                await player.start()
+        finally:
+            await player.close()
+
+    asyncio.run(main())
+
+
+def test_an_mpv_that_does_not_answer_is_a_clean_error(tmp_path: Path) -> None:
+    async def main() -> None:
+        player = MpvPlayer(
+            keyboard=False,
+            mpv=fake_mpv(tmp_path, f"#!{sys.executable}\n{SILENT_MPV}"),
+            command_timeout=0.3,
+        )
+        try:
+            # A TimeoutError would escape as a traceback; an MpvError is logged in one line.
+            with pytest.raises(MpvError, match="did not answer"):
+                await player.start()
+        finally:
+            await player.close()
+
+    asyncio.run(main())
