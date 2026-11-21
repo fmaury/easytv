@@ -148,7 +148,54 @@ rien quand il ne tourne pas. Trois façons de le lancer :
 3. **Par une skill**, seulement si une commande `/…` est voulue : une skill peut s'exécuter dans
    un agent (`/test-boutons` → `remote-tester`).
 
-## Étape 5 : agent `readme-tester`
+## Étape 5 : test de la télécommande sur la Pi, un qui agit, un qui vérifie
+
+- **Pourquoi** : `remote-tester` teste sur le PC. Sur la vraie Pi, on voit en plus le vrai réseau,
+  le vrai mpv en plein écran et le bandeau dessiné avec les polices de la Pi. Et celui qui vérifie
+  ne doit pas être celui qui a appuyé : comme une personne qui dit à voix haute ce qu'elle fait,
+  et une autre qui regarde que ça se passe bien.
+- **Principe** (arbitrage vidéo) : une « caméra » filme la Pi en continu, horodatée à la seconde ;
+  un observateur revoit l'enregistrement en face des annonces. Un agent ne peut pas regarder en
+  direct (quelques secondes par action, bandeau visible 4 s seulement).
+- **Quoi**, en trois parties :
+  1. **Journal** : une ligne par commande de la télécommande dans `app.py` (ex. `remote:
+     volume_up → volume 80`), avec son test. Aujourd'hui le journal ne note que les changements
+     de vidéo et l'extinction : ni le volume, ni le son coupé, ni le bouton infos. Sert aussi à
+     `/pi-diagnose` (« le son s'est coupé tout seul » : quelqu'un a-t-il appuyé ?).
+  2. **Caméra** : `.claude/scripts/pi-watch.sh`, commandes fixes et en lecture seule, hôte lu
+     dans `.claude/pi.local.env` :
+     - `start` : **un seul** `ssh` qui reste ouvert, suit le journal d'EasyTV et prend une
+       capture de la TV (`easytv.ctl`, `.jpg`, avec le bandeau) ~1 s après chaque événement ;
+     - `stop` : coupe la connexion, rapatrie journal et captures dans `.pi-test/` (ignoré par
+       git) ;
+     - `log <depuis> <jusqu'à>` : relit le journal d'une période.
+     Les commandes envoyées à la Pi sont écrites en dur ; les arguments sont vérifiés (format
+     d'heure). Autorisé **une fois** dans `.claude/settings.json` (validation de l'utilisateur)
+     → aucun `ssh` à valider pendant le test. Exception volontaire et limitée à la règle
+     « chaque ssh est validé », écrite dans `pi.md` ; tout autre `ssh` reste en `ask`.
+  3. **Deux agents et une skill `/pi-remote-test`** qui les enchaîne :
+     1. `pi-watch.sh start` ;
+     2. agent `pi-remote-tester` : ouvre `http://easytv.local` en taille téléphone (Playwright).
+        Pour chaque bouton, il **annonce** dans `.pi-test/actions.log` l'heure, le bouton et ce
+        qu'il attend (« 17:50:12 ▲ → chaîne 2 Pingu »), puis clique. À la fin, il remet la
+        chaîne et le volume du départ ;
+     3. `pi-watch.sh stop` ;
+     4. agent `pi-observer` : ne voit ni la page ni les clics. Il confronte chaque annonce au
+        journal et aux captures de la TV, et rend le tableau annonce → journal → écran → ✅/❌.
+- **Limites** :
+  - TV éteinte : mpv ne joue rien et refuse la capture, l'écran « dodo » est vérifié par le
+    journal seulement ;
+  - le test touche la TV en service (chaîne, volume, positions de reprise) : à lancer quand
+    personne ne regarde ;
+  - les captures 1080p chargent le processeur de la Pi 3 : quelques images perdues pendant le
+    test sont normales.
+- **Fini quand** :
+  - un test complet a tourné sur la Pi sans aucune validation `ssh` en dehors de l'autorisation
+    initiale ;
+  - chaque bouton a son verdict de l'observateur, preuve à l'appui (ligne de journal, capture) ;
+  - la TV est revenue sur la chaîne et le volume du départ.
+
+## Étape 6 : agent `readme-tester`
 
 - **Pourquoi** : un regard neuf, sans le contexte des conversations passées. Son avis reste celui
   d'une IA, pas d'un vrai utilisateur.
@@ -160,7 +207,7 @@ rien quand il ne tourne pas. Trois façons de le lancer :
     se font ensuite dans la conversation principale.
 - **Fini quand** : un premier rapport est produit et ses retours sont triés avec l'utilisateur.
 
-## Étape 6 (optionnelle) : agent `install-tester`
+## Étape 7 (optionnelle) : agent `install-tester`
 
 - **Pourquoi** : vérifier le guide d'installation sur la Pi sans Pi.
 - **Quoi** : `.claude/agents/install-tester.md`.
@@ -174,7 +221,7 @@ rien quand il ne tourne pas. Trois façons de le lancer :
   `install.sh` change.
 - **Fini quand** : un premier rapport est produit et trié avec l'utilisateur.
 
-## Étape 7 (optionnelle) : CI GitHub Actions
+## Étape 8 (optionnelle) : CI GitHub Actions
 
 - **Pourquoi** : un témoin indépendant du PC. Il repart d'un clone propre, ce qui attrape un
   fichier oublié dans un commit ou une dépendance absente de `uv.lock` (le pre-commit, lui, teste
