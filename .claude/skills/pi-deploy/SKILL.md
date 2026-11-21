@@ -28,7 +28,9 @@ Ci-dessous, `HOST` = cet hôte et
 ## 1. Préalables (sur le PC)
 
 1. `git status` : arbre propre, sinon le signaler et s'arrêter.
-2. Les 4 vérifications passent : `uv run ruff format --check .`, `uv run ruff check .`,
+2. `git config core.hooksPath` vaut `.githooks` : le pre-commit a déjà passé ruff, mypy et
+   pytest sur chaque commit, inutile de les relancer. Sinon (hook pas activé dans ce clone),
+   lancer les 4 vérifications : `uv run ruff format --check .`, `uv run ruff check .`,
    `uv run mypy`, `uv run pytest`.
 3. `git fetch -q && git status -sb` : si la branche est en avance sur `origin`, proposer
    `git push` (soumis à validation). La Pi fait `git pull` depuis GitHub : rien de non poussé n'y

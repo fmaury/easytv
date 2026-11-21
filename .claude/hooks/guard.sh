@@ -12,6 +12,9 @@ block() {
 [[ "$cmd" =~ git[[:space:]].*commit.*[[:space:]]-[a-zA-Z]*n([[:space:]]|$) ]] &&
     block "git commit -n skips the pre-commit checks"
 [[ "$cmd" == *EASYTV_ALLOW_TEST_CHANGES* ]] && block "only the user may allow test changes"
-[[ "$cmd" == *core.hooksPath* && "$cmd" != *--get* ]] &&
-    block "changing core.hooksPath disables the pre-commit checks"
+# Only the exact read form is allowed: "git config core.hooksPath --get" once *wrote* "--get"
+# (2026-11-21). Git keys are case-insensitive, so compare in lowercase.
+lower="${cmd,,}"
+[[ "${lower//git config --get core.hookspath/}" == *core.hookspath* ]] &&
+    block "changing core.hooksPath disables the pre-commit checks (read it with: git config --get core.hooksPath)"
 exit 0
