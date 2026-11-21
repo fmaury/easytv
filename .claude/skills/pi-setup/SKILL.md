@@ -11,15 +11,33 @@ Lire d'abord `.claude/rules/pi.md` (contraintes matérielles, règles de travail
 Chaque `ssh` est soumis à la validation de l'utilisateur (permission `ask`) : un `ssh` direct par
 étape, jamais dans une boucle ou un script, et dire en clair ce que fait la commande.
 
-**Hôte (obligatoire)** : `$ARGUMENTS`, sous la forme `utilisateur@ip` ou
-`utilisateur@raspberrypi.local`. Le nom `easytv.local` n'existe pas encore : c'est `install.sh`
-qui renomme la Pi. Pas d'utilisateur `pi` par défaut sur Raspberry Pi OS récent : c'est celui créé
-dans Raspberry Pi Imager. Si l'argument manque, demander l'utilisateur et l'IP (visible dans
-l'interface de la box) et s'arrêter là.
+**Hôte**, dans cet ordre :
+1. `$ARGUMENTS` s'il est donné (`utilisateur@ip` ou `utilisateur@raspberrypi.local`) ;
+2. sinon `.claude/pi.local.env` (fichier perso, ignoré par git) : `PI_USER@PI_IP` ;
+3. sinon, demander à l'utilisateur son utilisateur et l'IP de la Pi (visible dans l'interface de la box), proposer de créer
+   `.claude/pi.local.env` à partir de `.claude/pi.local.env.example`, et s'arrêter en attendant la
+   réponse. Ne jamais deviner l'hôte.
+
+Jamais de mot de passe dans ce fichier ni ailleurs : SSH marche par clé, sudo sans mot de passe
+ou saisi par l'utilisateur lui-même. Ne jamais écrire d'adresse ou d'utilisateur perso dans un
+fichier versionné.
+
+Pas `PI_HOST` ni `easytv.local` ici : ce nom n'existe pas encore, c'est `install.sh` qui renomme
+la Pi. Pas d'utilisateur `pi` par défaut sur Raspberry Pi OS récent : c'est celui créé dans
+Raspberry Pi Imager.
 Ci-dessous `HOST` = cet hôte, `SSH` = `ssh -o StrictHostKeyChecking=accept-new` (accepte un hôte
 jamais vu, mais refuse toujours une empreinte qui a changé) et
 `CTL` = `~/easytv/.venv/bin/python -m easytv.ctl`.
-Ne jamais écrire d'adresse ou d'utilisateur perso dans le dépôt (seulement dans la mémoire).
+
+## 0. Connexion par clé SSH
+
+```bash
+ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new HOST true && echo "clé OK"
+```
+
+En cas d'échec (`Permission denied`) : la Pi n'accepte que le mot de passe, que Claude ne doit
+jamais voir. L'utilisateur installe sa clé une fois, en tapant lui-même le mot de passe :
+`! ssh-copy-id HOST` (s'il n'a pas de clé : `! ssh-keygen -t ed25519` d'abord). Puis reprendre.
 
 ## 1. État des lieux (lecture seule)
 
@@ -77,7 +95,8 @@ avec l'IP et le signaler. L'IP marche partout, y compris pour la télécommande 
 ## 6. Rapport et suite
 
 - Court : modèle et OS, commit installé, nom de la Pi, son HDMI, état du service, anomalies.
-- Mettre à jour la mémoire (pas le dépôt) avec l'hôte et l'utilisateur.
+- Créer ou mettre à jour `.claude/pi.local.env` (`PI_USER`, `PI_IP`, et `PI_HOST=easytv.local`
+  si ce nom répond, sinon l'IP), pour que `/deploy-pi` et `/pi-diagnose` marchent sans argument.
 - Dire à l'utilisateur la suite :
   - ajouter des vidéos par SFTP dans `/media/tv/<chaîne>/` (en H.264) ;
   - télécommande : `http://easytv.local` sur un téléphone du Wi-Fi de la maison ;

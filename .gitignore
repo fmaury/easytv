@@ -19,3 +19,6 @@ videos/
 # remote-tester agent (local EasyTV, screenshots, browser files)
 .remote-test/
 .playwright-mcp/
+
+# Personal Pi address and user for the Claude skills (template: .claude/pi.local.env.example)
+.claude/pi.local.env

@@ -12,8 +12,18 @@ Lire d'abord `.claude/rules/pi.md` : les pannes connues et leurs signatures y so
 Chaque `ssh` est soumis à sa validation (permission `ask`) : un `ssh` direct par étape, jamais
 dans une boucle ou un script, et dire en clair ce que fait la commande.
 
-**Hôte** : dans `$ARGUMENTS` s'il est donné, sinon celui de la mémoire, sinon `easytv.local`.
-Le reste de `$ARGUMENTS` décrit le symptôme. Ci-dessous `HOST` = cet hôte et
+**Hôte**, dans cet ordre :
+1. `$ARGUMENTS` s'il est donné (son premier mot s'il contient `@` ; le reste décrit le symptôme) ;
+2. sinon `.claude/pi.local.env` (fichier perso, ignoré par git) : `PI_USER@PI_HOST` ;
+3. sinon, demander à l'utilisateur son utilisateur et le nom (`easytv.local`) ou l'IP de la Pi, proposer de créer
+   `.claude/pi.local.env` à partir de `.claude/pi.local.env.example`, et s'arrêter en attendant la
+   réponse. Ne jamais deviner l'hôte.
+
+Jamais de mot de passe dans ce fichier ni ailleurs : SSH marche par clé, sudo sans mot de passe
+ou saisi par l'utilisateur lui-même. Ne jamais écrire d'adresse ou d'utilisateur perso dans un
+fichier versionné.
+
+Ci-dessous `HOST` = cet hôte et
 `CTL` = `~/easytv/.venv/bin/python -m easytv.ctl`.
 
 ## 1. Système et journal

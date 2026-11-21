@@ -19,8 +19,10 @@ paths:
   et chaque commande expliquée en clair.
 - Première installation : skill `pi-setup` (hôte en argument, `utilisateur@ip`). Mettre à jour :
   skill `deploy-pi`. Diagnostiquer : skill `pi-diagnose`.
-- Adresse, utilisateur et détails de la Pi de l'utilisateur : dans la mémoire, jamais dans le
-  dépôt (il sert à tout le monde). Par défaut : `easytv.local`.
+- Adresse et utilisateur de la Pi : `.claude/pi.local.env` (perso, ignoré par git ; modèle
+  `.claude/pi.local.env.example`), jamais dans un fichier versionné (le dépôt sert à tout le
+  monde). **Aucun mot de passe** nulle part : SSH par clé (`ssh-copy-id`), sudo saisi par
+  l'utilisateur lui-même s'il en demande un.
 - Interroger ou piloter EasyTV : `~/easytv/.venv/bin/python -m easytv.ctl get|cmd …` (socket
   `/tmp/easytv-*/mpv.sock`).
 

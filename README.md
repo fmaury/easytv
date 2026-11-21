@@ -223,3 +223,30 @@ uv run pytest
 
 Architecture, règles de comportement et conventions : voir [`CLAUDE.md`](CLAUDE.md) ;
 feuilles de route : [`ROADMAP.md`](ROADMAP.md) et [`ROADMAP-CLAUDE.md`](ROADMAP-CLAUDE.md).
+
+### Gérer la Pi avec Claude Code
+
+Le dépôt contient des commandes Claude Code pour la Pi :
+
+| Commande | Rôle |
+|---|---|
+| `/pi-setup` | première installation sur une Pi neuve (clone, `install.sh`, vérifications) |
+| `/deploy-pi` | mise à jour (`git pull`, relance, vérifications) |
+| `/pi-diagnose` | diagnostic : erreurs, température, alimentation, capture de l'écran de la TV |
+
+Chaque commande SSH vers la Pi te demande une validation avant de partir.
+
+1. **Connexion par clé SSH** (une fois) : Claude ne doit jamais connaître tes mots de passe.
+   ```bash
+   ssh-keygen -t ed25519                 # seulement si tu n'as pas encore de clé
+   ssh-copy-id ton-utilisateur@192.168.x.x
+   ```
+2. **Adresse de ta Pi** : copie le modèle et remplis-le. Ce fichier est ignoré par git, il ne part
+   jamais sur GitHub.
+   ```bash
+   cp .claude/pi.local.env.example .claude/pi.local.env
+   ```
+   **N'y mets aucun mot de passe** : la clé SSH suffit, et si `sudo` en demande un, c'est toi qui
+   le tapes.
+3. Sans ce fichier, donne l'adresse à la commande (`/pi-setup ton-utilisateur@192.168.x.x`), ou
+   Claude te la demandera et proposera de créer le fichier.
