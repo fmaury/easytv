@@ -76,17 +76,37 @@ une procédure (déployer, diagnostiquer, regarder une page).
 - **Ce qui reste hors champ** : les vrais clics JavaScript et l'affichage (étape 4), l'image réelle
   et la Pi.
 
-## Étape 4 : skill `/try-remote` (navigateur)
+## Étape 4 : agent `remote-tester` (navigateur Playwright)
 
-- **Pourquoi** : le JavaScript de `web.html` et la mise en page sur téléphone ne sont pas testés.
-  Juger un rendu demande des yeux.
-- **Quoi** :
-  - EasyTV lancé en local ;
-  - page ouverte à la taille d'un téléphone dans le navigateur disponible ;
-  - clic sur chaque bouton, effet vérifié par `easytv.ctl` ;
-  - captures de la page et de l'écran de la TV ;
-  - rapport.
-- **Fini quand** : la skill a tourné une fois et produit son rapport.
+- **Pourquoi** : le JavaScript de `web.html` et la mise en page sur téléphone ne sont pas testés
+  (l'étape 3 envoie les commandes directement à l'API). Juger un rendu demande des yeux : bouton
+  😴/📺, barre de progression, liste des chaînes (☰), « Son coupé », textes qui débordent.
+- **Pourquoi un agent** : un test dans le navigateur produit beaucoup de matière (description de
+  la page après chaque clic, captures, définitions des outils Playwright). L'agent travaille dans
+  sa propre conversation et ne rend qu'un court rapport : la conversation principale reste
+  légère. Il peut tourner en arrière-plan.
+- **Quoi** : `.claude/agents/remote-tester.md`.
+  - Navigateur : **Playwright MCP**, qui ouvre sa propre fenêtre (visible), en émulation de
+    téléphone, sans extension ni session perso. Déclaré **dans l'agent seulement** (`mcpServers`),
+    pas dans un `.mcp.json` de projet : il démarre avec l'agent et s'arrête après, sans rien
+    coûter aux autres sessions. Version épinglée, lancée par `npx` (Node déjà installé),
+    navigateur de Playwright téléchargé une fois (~150 Mo).
+  - Consignes (l'agent ne sait rien de nos conversations, tout doit être écrit dans son fichier) :
+    1. lancer EasyTV en local avec des vidéos de test, `input = "remote"` ;
+    2. ouvrir la page à la taille d'un téléphone ;
+    3. cliquer sur chaque bouton, vérifier l'effet sur mpv (`easytv.ctl`) et sur la page ;
+    4. captures de la page et de l'écran de la TV (`screenshot-to-file`), enregistrées dans des
+       fichiers ;
+    5. arrêter EasyTV ;
+    6. rapport court : chaque bouton OK/KO, défauts d'affichage, chemins des captures.
+  - Outils : terminal (EasyTV, `easytv.ctl`), lecture de fichiers, Playwright. Aucune
+    modification du code : il constate, la correction se fait ensuite dans la conversation
+    principale.
+  - Lancement : « teste la télécommande », ou par Claude après une modification de la page ou du
+    bandeau.
+- **À vérifier en le mettant en place** : la déclaration d'un MCP propre à un agent dans la
+  version actuelle de Claude Code (sinon : `.mcp.json` de projet).
+- **Fini quand** : l'agent a tourné une fois, en vrai, et rendu son rapport avec les captures.
 
 ## Étape 5 (optionnelle) : agent « nouvel utilisateur »
 
