@@ -1,6 +1,6 @@
 ---
-name: deploy-pi
-description: Déploie EasyTV sur la Raspberry Pi (git pull, install.sh si nécessaire, relance, vérification). À utiliser pour toute mise à jour de la Pi, dès que l'utilisateur demande de déployer, mettre à jour ou installer le code sur la Pi.
+name: pi-deploy
+description: Met à jour EasyTV sur une Raspberry Pi où il est déjà installé (git pull, install.sh si nécessaire, relance, vérification). À utiliser dès que l'utilisateur demande de déployer ou de mettre à jour la Pi. Pour une première installation, c'est pi-setup.
 argument-hint: "[hôte ssh]"
 ---
 

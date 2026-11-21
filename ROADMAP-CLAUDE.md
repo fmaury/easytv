@@ -13,7 +13,7 @@ une procédure (déployer, diagnostiquer, regarder une page).
 - `CLAUDE.md` allégé (184 → 116 lignes). Les détails Pi/mpv/HDMI vont dans `.claude/rules/pi.md`
   (chargé seulement quand on touche aux fichiers Pi), la feuille de route du produit dans
   `ROADMAP.md`.
-- Skills `/deploy-pi` (déploiement) et `/pi-diagnose` (diagnostic en lecture seule).
+- Skills `/pi-deploy` (déploiement) et `/pi-diagnose` (diagnostic en lecture seule).
 - `ssh`, `scp`, `rsync` et `git push` en `ask` : toujours validés par l'utilisateur.
 - Hook Stop : ruff + mypy avant que Claude rende la main, si du Python a changé.
 - Outil `python -m easytv.ctl` : interroger et piloter la TV en marche par la socket mpv.
@@ -23,12 +23,12 @@ une procédure (déployer, diagnostiquer, regarder une page).
 - **Pourquoi** : les skills et la validation SSH n'ont jamais tourné sur la Pi.
 - **Quoi** :
   1. push par l'utilisateur ;
-  2. `/deploy-pi` ✅ (2026-11-21 : `c9b53d5` déployé par relance simple ; ajout du contrôle de
+  2. `/pi-deploy` ✅ (2026-11-21 : `c9b53d5` déployé par relance simple ; ajout du contrôle de
      l'heure de redémarrage) ;
   3. nouvelle skill `/pi-setup` pour la première installation (hôte en argument : `easytv.local`
      n'existe qu'après `install.sh`) ;
   4. test de bout en bout : effacer EasyTV de la Pi (périmètre décidé avec l'utilisateur, nom
-     remis à `raspberrypi`), `/pi-setup utilisateur@ip`, puis `/deploy-pi` ;
+     remis à `raspberrypi`), `/pi-setup utilisateur@ip`, puis `/pi-deploy` ;
   5. `/pi-diagnose` ;
   6. corriger les skills d'après ce qui coince.
 - **Fini quand** :
@@ -161,7 +161,7 @@ rien quand il ne tourne pas. Trois façons de le lancer :
     attraper un paquet introuvable ou une erreur de syntaxe.
   - Rapport, sans modification.
 - **Limite** : il ne reproduit pas la Pi. Pas d'ARM, de HDMI, de son, de `systemctl` réel ni de
-  renommage de la machine. Le vrai test d'installation reste la Pi, que `/deploy-pi` exerce quand
+  renommage de la machine. Le vrai test d'installation reste la Pi, que `/pi-deploy` exerce quand
   `install.sh` change.
 - **Fini quand** : un premier rapport est produit et trié avec l'utilisateur.
 

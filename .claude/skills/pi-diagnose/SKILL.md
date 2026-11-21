@@ -70,4 +70,4 @@ Confronter aux pannes connues de `pi.md` :
 ## 5. Rapport
 
 Symptômes constatés, cause probable, correctif proposé (code, config ou matériel). Si le correctif
-touche le code : le faire en local, puis déployer avec la skill `deploy-pi`.
+touche le code : le faire en local, puis déployer avec la skill `pi-deploy`.

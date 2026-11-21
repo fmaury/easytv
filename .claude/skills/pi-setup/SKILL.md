@@ -1,6 +1,6 @@
 ---
 name: pi-setup
-description: Première installation d'EasyTV sur une Raspberry Pi neuve ou effacée (clone du dépôt, install.sh, vérifications, passage au nom easytv.local). À utiliser quand EasyTV n'est pas encore installé sur la Pi. Pour une mise à jour d'une installation existante, c'est deploy-pi.
+description: Première installation d'EasyTV sur une Raspberry Pi neuve ou effacée (clone du dépôt, install.sh, vérifications, passage au nom easytv.local). À utiliser quand EasyTV n'est pas encore installé sur la Pi. Pour une mise à jour d'une installation existante, c'est pi-deploy.
 argument-hint: "<utilisateur@ip-ou-nom>  (obligatoire : easytv.local n'existe qu'après l'installation)"
 ---
 
@@ -46,7 +46,7 @@ SSH HOST 'hostname; tr -d "\0" </proc/device-tree/model; echo; . /etc/os-release
 ```
 
 S'arrêter et en parler à l'utilisateur si :
-- `~/easytv` existe déjà → c'est une mise à jour (`deploy-pi`), ou un nettoyage à décider avec lui ;
+- `~/easytv` existe déjà → c'est une mise à jour (`pi-deploy`), ou un nettoyage à décider avec lui ;
 - ce n'est pas une Raspberry Pi, ou l'OS n'est pas Raspberry Pi OS / Debian 64 bits ;
 - `sudo: MOT DE PASSE` → `install.sh` attendrait une saisie que Claude ne peut pas faire. Faire
   les étapes 2 et 3, puis l'utilisateur lance lui-même l'étape 4 dans Claude Code :
@@ -96,8 +96,8 @@ avec l'IP et le signaler. L'IP marche partout, y compris pour la télécommande 
 
 - Court : modèle et OS, commit installé, nom de la Pi, son HDMI, état du service, anomalies.
 - Créer ou mettre à jour `.claude/pi.local.env` (`PI_USER`, `PI_IP`, et `PI_HOST=easytv.local`
-  si ce nom répond, sinon l'IP), pour que `/deploy-pi` et `/pi-diagnose` marchent sans argument.
+  si ce nom répond, sinon l'IP), pour que `/pi-deploy` et `/pi-diagnose` marchent sans argument.
 - Dire à l'utilisateur la suite :
   - ajouter des vidéos par SFTP dans `/media/tv/<chaîne>/` (en H.264) ;
   - télécommande : `http://easytv.local` sur un téléphone du Wi-Fi de la maison ;
-  - mises à jour : `/deploy-pi` ; problème : `/pi-diagnose`.
+  - mises à jour : `/pi-deploy` ; problème : `/pi-diagnose`.

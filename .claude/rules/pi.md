@@ -18,7 +18,7 @@ paths:
   par commande, jamais caché dans une boucle ou un script (sinon la validation ne s'applique pas),
   et chaque commande expliquée en clair.
 - Première installation : skill `pi-setup` (hôte en argument, `utilisateur@ip`). Mettre à jour :
-  skill `deploy-pi`. Diagnostiquer : skill `pi-diagnose`.
+  skill `pi-deploy`. Diagnostiquer : skill `pi-diagnose`.
 - Adresse et utilisateur de la Pi : `.claude/pi.local.env` (perso, ignoré par git ; modèle
   `.claude/pi.local.env.example`), jamais dans un fichier versionné (le dépôt sert à tout le
   monde). **Aucun mot de passe** nulle part : SSH par clé (`ssh-copy-id`), sudo saisi par

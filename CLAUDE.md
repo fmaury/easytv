@@ -120,10 +120,11 @@ Le pre-commit (`.githooks/pre-commit`) les relance à chaque commit et refuse le
 ## Raspberry Pi
 
 - Première installation : `/pi-setup <utilisateur@ip>` (`easytv.local` n'existe qu'après).
-  Déployer une mise à jour : toujours avec la skill `/deploy-pi`. Diagnostiquer : `/pi-diagnose`.
+  Déployer une mise à jour : toujours avec la skill `/pi-deploy`. Diagnostiquer : `/pi-diagnose`.
 - `ssh`, `scp`, `rsync` et `git push` demandent la validation de l'utilisateur (`.claude/settings.json`).
 - Contraintes matérielles, installation, règles de travail : `.claude/rules/pi.md`.
-- Une procédure réussie et appelée à revenir devient une skill dans `.claude/skills/`.
+- Une procédure réussie et appelée à revenir devient une skill dans `.claude/skills/` ; celles
+  qui concernent la Pi s'appellent `pi-…` (`pi-setup`, `pi-deploy`, `pi-diagnose`).
 
 ## Feuille de route
 

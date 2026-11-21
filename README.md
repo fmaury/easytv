@@ -231,7 +231,7 @@ Le dépôt contient des commandes Claude Code pour la Pi :
 | Commande | Rôle |
 |---|---|
 | `/pi-setup` | première installation sur une Pi neuve (clone, `install.sh`, vérifications) |
-| `/deploy-pi` | mise à jour (`git pull`, relance, vérifications) |
+| `/pi-deploy` | mise à jour (`git pull`, relance, vérifications) |
 | `/pi-diagnose` | diagnostic : erreurs, température, alimentation, capture de l'écran de la TV |
 
 Chaque commande SSH vers la Pi te demande une validation avant de partir.
