@@ -46,11 +46,12 @@ locales sur la Pi, historique divergent) : s'arrêter et montrer l'erreur, ne ri
 ## 4. Vérifier (~15 s après la relance)
 
 ```bash
-ssh HOST 'systemctl is-active easytv; journalctl -u easytv --since "SINCE" -p warning --no-pager -o cat; CTL get path time-pos hwdec-current'
+ssh HOST 'systemctl is-active easytv; systemctl show easytv -p ActiveEnterTimestamp; journalctl -u easytv --since "SINCE" -p warning --no-pager -o cat; CTL get path time-pos hwdec-current'
 ```
 
 Attendu :
-- `active` ;
+- `active`, avec un `ActiveEnterTimestamp` **après** `SINCE` (sinon le service n'a pas redémarré
+  et tourne encore l'ancien code) ;
 - aucun avertissement nouveau, et surtout pas « Failed to commit atomic request » (écran noir, voir
   `pi.md`) ;
 - `path` et `time-pos` présents ;
