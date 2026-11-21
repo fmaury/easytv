@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import shutil
 import subprocess
 from collections.abc import Awaitable, Callable, Sequence
 from pathlib import Path
@@ -9,11 +8,6 @@ import pytest
 
 from easytv.banner import channel_banner, message_banner, volume_banner
 from easytv.player import EndOfFile, Layer, Message, MpvPlayer, PlayerEvent, VideoError
-
-pytestmark = pytest.mark.skipif(
-    shutil.which("mpv") is None or shutil.which("ffmpeg") is None,
-    reason="integration tests need mpv and ffmpeg",
-)
 
 
 @pytest.fixture(scope="module")
@@ -146,7 +140,6 @@ def test_volume_gauge_and_banner_use_separate_layers(video: Path) -> None:
 ALSA_CONFIG = Path("/usr/share/alsa/alsa.conf")
 
 
-@pytest.mark.skipif(not ALSA_CONFIG.exists(), reason="needs ALSA")
 def test_sound_comes_back_after_the_audio_output_failed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
