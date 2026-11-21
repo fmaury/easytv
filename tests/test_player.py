@@ -5,10 +5,12 @@ import subprocess
 import sys
 from collections.abc import Awaitable, Callable, Sequence
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from easytv.banner import channel_banner, message_banner, volume_banner
+from easytv.config import SNOW_MAX_SECONDS
 from easytv.player import (
     COMMAND_TIMEOUT,
     CONNECT_TIMEOUT,
@@ -307,7 +309,7 @@ def test_snow_clip_is_short_h264_with_sound() -> None:
     assert "codec_name=h264" in probe  # decoded in hardware on the Pi
     assert "codec_name=aac" in probe
     duration = float(probe.split("duration=")[1].split()[0])
-    assert 0.5 <= duration <= 1.0
+    assert duration >= SNOW_MAX_SECONDS  # cut by mpv at snow_seconds
 
 
 def test_snow_then_the_video_from_its_start_position(video: Path) -> None:
@@ -349,3 +351,52 @@ def test_stop_during_the_snow_plays_nothing(video: Path) -> None:
         assert await mpv_path(player) is None
 
     run(scenario)
+
+
+def run_with(scenario: Callable[[MpvPlayer], Awaitable[None]], **options: Any) -> None:
+    async def main() -> None:
+        player = MpvPlayer(
+            keyboard=False, extra_args=["--vo=null", "--ao=null", "--force-window=no"], **options
+        )
+        await player.start()
+        try:
+            await asyncio.wait_for(scenario(player), timeout=15)
+        finally:
+            await player.close()
+
+    asyncio.run(main())
+
+
+def test_snow_is_cut_at_its_duration_and_the_video_is_not(video: Path) -> None:
+    async def scenario(player: MpvPlayer) -> None:
+        loop = asyncio.get_running_loop()
+        began = loop.time()
+        await player.play(video, start=0, snow=True)
+        await wait_path(player, video)
+        assert loop.time() - began < 1.5  # the clip lasts 2.2 s
+        assert await wait_position(player, 1.0) >= 1.0  # no cut left on the video
+
+    run_with(scenario, snow_seconds=0.3)
+
+
+async def audio_filters(player: MpvPlayer) -> list[str]:
+    filters = await player._command("get_property", "af")
+    return [str(f.get("label")) for f in filters]
+
+
+def test_snow_volume_applies_to_the_snow_only(video: Path) -> None:
+    async def scenario(player: MpvPlayer) -> None:
+        await player.play(video, start=0, snow=True)
+        assert await audio_filters(player) == ["easytv-snow"]
+        await wait_path(player, video)
+        assert await audio_filters(player) == []
+
+    run_with(scenario, snow_seconds=0.3, snow_volume=40)
+
+
+def test_full_snow_volume_adds_no_filter(video: Path) -> None:
+    async def scenario(player: MpvPlayer) -> None:
+        await player.play(video, start=0, snow=True)
+        assert await audio_filters(player) == []
+
+    run_with(scenario)

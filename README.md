@@ -161,7 +161,8 @@ permet de :
   rallume aussi.
 
 **Neige** : en changeant de chaîne et en rallumant la TV, un peu de neige de vieille TV
-(~0,7 s, avec le « chhh ») avant l'image. `snow = false` dans la configuration la coupe.
+(0,4 s, avec le « chhh ») avant l'image. Durée, volume du bruit, ou neige coupée : voir la
+configuration (`snow`, `snow_seconds`, `snow_volume`).
 
 **Heure du coucher** : chaque jour à `bedtime` (minuit par défaut), la TV s'éteint toute seule et
 affiche « Il est temps de dormir ». On peut la rallumer depuis le téléphone.
@@ -189,6 +190,8 @@ modification : `sudo systemctl restart easytv`.
 | `web_port` | `80` | Port de la page web de télécommande (`0` la désactive) |
 | `bedtime` | `"00:00"` | Heure à laquelle la TV s'éteint toute seule chaque jour (`""` : jamais) |
 | `snow` | `true` | Neige (image et son) en changeant de chaîne et en rallumant la TV |
+| `snow_seconds` | `0.4` | Durée de la neige, jusqu'à `2` secondes |
+| `snow_volume` | `100` | Volume du « chhh » de la neige, en % du volume de la TV (`0` : silencieuse) |
 | `video_extensions` | `.mp4 .mkv .avi .mov .m4v .webm .ts` | Extensions reconnues |
 
 ## 7. Mettre à jour

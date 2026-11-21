@@ -142,3 +142,25 @@ def test_invalid_snow(tmp_path: Path, value: str) -> None:
     path = write(tmp_path, f'channels_dir = "/tv"\nstate_file = "/s.json"\nsnow = {value}')
     with pytest.raises(ConfigError, match="snow"):
         load_config(path)
+
+
+def test_snow_duration_and_volume(tmp_path: Path) -> None:
+    base = 'channels_dir = "/tv"\nstate_file = "/s.json"\n'
+    config = load_config(write(tmp_path, base))
+    assert (config.snow_seconds, config.snow_volume) == (0.4, 100)
+    config = load_config(write(tmp_path, base + "snow_seconds = 1\nsnow_volume = 0"))
+    assert (config.snow_seconds, config.snow_volume) == (1.0, 0)
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "2.5", "true", '"0.4"'])
+def test_invalid_snow_seconds(tmp_path: Path, value: str) -> None:
+    path = write(tmp_path, f'channels_dir = "/tv"\nstate_file = "/s.json"\nsnow_seconds = {value}')
+    with pytest.raises(ConfigError, match="snow_seconds"):
+        load_config(path)
+
+
+@pytest.mark.parametrize("value", ["-1", "101", "50.5", "true", '"50"'])
+def test_invalid_snow_volume(tmp_path: Path, value: str) -> None:
+    path = write(tmp_path, f'channels_dir = "/tv"\nstate_file = "/s.json"\nsnow_volume = {value}')
+    with pytest.raises(ConfigError, match="snow_volume"):
+        load_config(path)

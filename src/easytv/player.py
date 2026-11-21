@@ -118,6 +118,8 @@ class MpvPlayer:
         mpv: str = "mpv",
         connect_timeout: float = CONNECT_TIMEOUT,
         command_timeout: float = COMMAND_TIMEOUT,
+        snow_seconds: float = 0.4,
+        snow_volume: int = 100,
     ) -> None:
         self.events: asyncio.Queue[PlayerEvent] = asyncio.Queue()
         self._mpv = mpv
@@ -148,6 +150,9 @@ class MpvPlayer:
         self._generation = 0  # incremented by each play() and stop(): stale snow ends are dropped
         self._load_lock = asyncio.Lock()  # a load is two commands (start, loadfile): never mixed
         self._snow_task: asyncio.Task[None] | None = None
+        self._snow_seconds = snow_seconds
+        self._snow_volume = snow_volume  # % of the TV volume
+        self._snow_filter = False  # whether the snow's volume filter is in mpv's audio chain
 
     @property
     def position(self) -> float | None:
@@ -212,7 +217,7 @@ class MpvPlayer:
         async with self._load_lock:
             if snow:
                 self._after_snow = (self._generation, path, start)
-                await self._load(SNOW, 0)
+                await self._load(SNOW, 0, end=self._snow_seconds)
             else:
                 self._after_snow = None
                 await self._load(path, start)
@@ -228,7 +233,7 @@ class MpvPlayer:
                 logger.error("cannot load %s after the snow: %s", path.name, e)
                 self.events.put_nowait(VideoError(str(e)))
 
-    async def _load(self, path: Path, start: float) -> None:
+    async def _load(self, path: Path, start: float, *, end: float | None = None) -> None:
         self._position = None
         self._duration = None
         self._loading = True
@@ -239,9 +244,22 @@ class MpvPlayer:
         # The `start` option applies to the next loaded file; setting it first works on every
         # mpv version, unlike loadfile's per-file options whose syntax changed in mpv 0.38.
         await self._command("set_property", "start", f"{start:.3f}")
+        await self._command("set_property", "end", "none" if end is None else f"{end:.3f}")
+        await self._set_snow_filter(path == SNOW and self._snow_volume != 100)
         reply = await self._command("loadfile", str(path), "replace")
         entry = reply.get("playlist_entry_id") if isinstance(reply, dict) else None
         self._entry_id = entry if isinstance(entry, int) else None
+
+    async def _set_snow_filter(self, on: bool) -> None:
+        """Lower the snow's sound, through a labelled filter that leaves any other one alone."""
+        if on == self._snow_filter:
+            return
+        if on:
+            gain = self._snow_volume / 100
+            await self._command("af", "add", f"@easytv-snow:lavfi=[volume={gain:.2f}]")
+        else:
+            await self._command("af", "remove", "@easytv-snow")
+        self._snow_filter = on
 
     async def show_banner(
         self, ass: str, seconds: float | None, layer: Layer = Layer.BANNER

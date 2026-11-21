@@ -56,6 +56,8 @@ async def _run(config: Config, *, fullscreen: bool) -> StopReason:
         keyboard=config.input is InputMode.KEYBOARD,
         fullscreen=fullscreen,
         extra_args=config.mpv_args,
+        snow_seconds=config.snow_seconds,
+        snow_volume=config.snow_volume,
     )
     await player.start()
     try:

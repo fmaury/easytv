@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_VIDEO_EXTENSIONS = frozenset({".mp4", ".mkv", ".avi", ".mov", ".m4v", ".webm", ".ts"})
+SNOW_MAX_SECONDS = 2.0  # length of the snow clip (snow.mp4 lasts a bit more)
 
 
 class ConfigError(Exception):
@@ -30,6 +31,8 @@ class Config:
     web_port: int = 8080  # web remote for phones; 0 disables it
     bedtime: time | None = None  # the TV goes to sleep every day at this time
     snow: bool = True  # TV snow when changing channel and when the TV comes on
+    snow_seconds: float = 0.4
+    snow_volume: int = 100  # loudness of the snow's "shhh", in % of the TV volume
 
 
 def load_config(path: Path) -> Config:
@@ -54,6 +57,8 @@ def load_config(path: Path) -> Config:
         web_port=_port(data, "web_port", defaults.web_port),
         bedtime=_bedtime(data),
         snow=_bool(data, "snow", defaults.snow),
+        snow_seconds=_snow_seconds(data, defaults.snow_seconds),
+        snow_volume=_percent(data, "snow_volume", defaults.snow_volume),
     )
 
 
@@ -110,6 +115,24 @@ def _bool(data: dict[str, Any], key: str, default: bool) -> bool:
     value = data.get(key, default)
     if not isinstance(value, bool):
         raise ConfigError(f"{key} must be true or false")
+    return value
+
+
+def _snow_seconds(data: dict[str, Any], default: float) -> float:
+    value = data.get("snow_seconds", default)
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int | float)
+        or not 0 < value <= SNOW_MAX_SECONDS
+    ):
+        raise ConfigError(f"snow_seconds must be a number of seconds, at most {SNOW_MAX_SECONDS:g}")
+    return float(value)
+
+
+def _percent(data: dict[str, Any], key: str, default: int) -> int:
+    value = data.get(key, default)
+    if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 100:
+        raise ConfigError(f"{key} must be a whole number from 0 to 100")
     return value
 
 

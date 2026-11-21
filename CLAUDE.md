@@ -28,7 +28,8 @@ là où on l'a laissée.
    lance rien ; non mémorisé (au redémarrage, la TV rejoue). `bedtime` éteint chaque jour à heure
    fixe (vérifié toutes les 15 s ; un saut d'horloge de plus de 5 min, NTP au boot, n'éteint rien).
 10. **Volume** : celui de mpv (0–100, pas de 5), indépendant de la TV ; le changer remet le son.
-11. **Neige** (`snow`, activée par défaut) : ~0,7 s de neige, image et son (`snow.mp4`, H.264,
+11. **Neige** (`snow`, activée par défaut) : `snow_seconds` (0,4 s ; 2 s max) de neige, image et
+    son au volume `snow_volume` % de la TV (`snow.mp4` de 2,2 s coupé par mpv, H.264,
     `scripts/make-snow.sh`), avant la vidéo quand la chaîne change, au démarrage et au
     rallumage ; jamais entre deux vidéos d'une chaîne. Pendant la neige, la position de la vidéo
     à venir est inconnue ; zapper ou éteindre pendant la neige l'annule.

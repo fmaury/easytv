@@ -28,9 +28,10 @@ web_port = 80
 # "" pour désactiver.
 bedtime = "00:00"
 
-# Neige de vieille TV (image et « chhh », ~0,7 s) en changeant de chaîne et en rallumant la TV.
-# false pour la couper.
-snow = true
+# Neige de vieille TV (image et « chhh ») en changeant de chaîne et en rallumant la TV.
+snow = true            # false pour la couper
+snow_seconds = 0.4     # durée de la neige, jusqu'à 2 secondes
+snow_volume = 100      # volume du « chhh », en % du volume de la TV (0 : neige silencieuse)
 
 # Fréquence de sauvegarde de l'état (en secondes). 30 s ménage la carte SD ; l'état est de toute
 # façon sauvegardé immédiatement à chaque zapping et à l'arrêt.
