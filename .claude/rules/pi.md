@@ -17,7 +17,8 @@ paths:
   `ssh`, `scp`, `rsync` et `git push` sont en `ask` dans `.claude/settings.json`. Un `ssh` direct
   par commande, jamais caché dans une boucle ou un script (sinon la validation ne s'applique pas),
   et chaque commande expliquée en clair.
-- Déployer : skill `deploy-pi`. Diagnostiquer : skill `pi-diagnose`.
+- Première installation : skill `pi-setup` (hôte en argument, `utilisateur@ip`). Mettre à jour :
+  skill `deploy-pi`. Diagnostiquer : skill `pi-diagnose`.
 - Adresse, utilisateur et détails de la Pi de l'utilisateur : dans la mémoire, jamais dans le
   dépôt (il sert à tout le monde). Par défaut : `easytv.local`.
 - Interroger ou piloter EasyTV : `~/easytv/.venv/bin/python -m easytv.ctl get|cmd …` (socket

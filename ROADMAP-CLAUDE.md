@@ -23,11 +23,17 @@ une procédure (déployer, diagnostiquer, regarder une page).
 - **Pourquoi** : les skills et la validation SSH n'ont jamais tourné sur la Pi.
 - **Quoi** :
   1. push par l'utilisateur ;
-  2. `/deploy-pi` ;
-  3. `/pi-diagnose` ;
-  4. corriger les skills d'après ce qui coince.
+  2. `/deploy-pi` ✅ (2026-11-21 : `c9b53d5` déployé par relance simple ; ajout du contrôle de
+     l'heure de redémarrage) ;
+  3. nouvelle skill `/pi-setup` pour la première installation (hôte en argument : `easytv.local`
+     n'existe qu'après `install.sh`) ;
+  4. test de bout en bout : effacer EasyTV de la Pi (périmètre décidé avec l'utilisateur, nom
+     remis à `raspberrypi`), `/pi-setup utilisateur@ip`, puis `/deploy-pi` ;
+  5. `/pi-diagnose` ;
+  6. corriger les skills d'après ce qui coince.
 - **Fini quand** :
   - chaque `ssh` a demandé une validation ;
+  - une Pi effacée est réinstallée par `/pi-setup` et répond sur `easytv.local` ;
   - la Pi tourne avec le dernier commit ;
   - le diagnostic produit un rapport et une capture de la TV.
 
