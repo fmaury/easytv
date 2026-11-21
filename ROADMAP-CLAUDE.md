@@ -55,7 +55,7 @@ une procédure (déployer, diagnostiquer, regarder une page).
   - un commit avec une erreur de type, un test supprimé ou un `xfail` ajouté est refusé ;
   - un `--no-verify` lancé par Claude est bloqué.
 
-## Étape 3 : test de bout en bout de la télécommande
+## Étape 3 : test de bout en bout de la télécommande ✅ (2026-11-21)
 
 - **Pourquoi** : la chaîne page web → App → vrai mpv n'est testée nulle part. Chaque morceau ne
   l'est que séparément, avec des faux.
@@ -65,9 +65,16 @@ une procédure (déployer, diagnostiquer, regarder une page).
   - Chaque action de la page est envoyée par `POST /api/command`, puis l'état réel est vérifié par
     `/api/status` et par `easytv.ctl` : chaîne et vidéo en cours, volume, son coupé, éteint ou
     allumé.
-  - Ignoré si mpv ou ffmpeg manquent.
+  - mpv et ffmpeg obligatoires : pas de `skipif`, le test échoue s'ils manquent (décision de
+    l'utilisateur : mpv est indispensable à EasyTV).
+  - En plus, dans `tests/test_web.py` : chaque `data-action` de `web.html` est une action connue, et
+    chaque action proposée a son bouton (une faute de frappe rendrait un bouton muet).
 - **Fini quand** : toutes les touches de la page sont couvertes, et le test tourne dans le
   pre-commit.
+- **Résultat** : 9 tests (~6 s), stables sur 5 passes. Un sabotage volontaire est détecté : volume
+  changé dans l'état mais pas appliqué à mpv, ou faute de frappe dans un bouton.
+- **Ce qui reste hors champ** : les vrais clics JavaScript et l'affichage (étape 4), l'image réelle
+  et la Pi.
 
 ## Étape 4 : skill `/try-remote` (navigateur)
 

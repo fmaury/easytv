@@ -85,7 +85,9 @@ uv run python -m easytv.ctl cmd script-message easytv next_channel   # la pilote
 Codes de sortie : 0 = quitté (q/Échap, Ctrl+C, SIGTERM), 1 = mpv fermé tout seul ou introuvable
 (systemd doit relancer), 2 = config invalide.
 
-`tests/test_player.py` lance le vrai mpv (`--vo=null`) ; il est ignoré si mpv ou ffmpeg manquent.
+`tests/test_player.py` lance le vrai mpv (`--vo=null`) ; `tests/test_e2e.py` lance un vrai EasyTV et
+appuie sur chaque bouton de la télécommande par l'API, effet vérifié sur mpv. mpv et ffmpeg
+(génération des clips de test) sont obligatoires pour les tests.
 Essai réel piloté par Claude : config avec `input = "remote"` (et `--vo=null` sans écran), puis
 `easytv.ctl`.
 

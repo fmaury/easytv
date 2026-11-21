@@ -1,6 +1,8 @@
 import asyncio
 import json
+import re
 from collections.abc import Awaitable, Callable
+from importlib import resources
 
 import pytest
 
@@ -78,6 +80,18 @@ def test_parse_invalid_command(raw: bytes) -> None:
 
 def test_quit_is_the_only_action_not_offered() -> None:
     assert set(Action) - WEB_ACTIONS == {Action.QUIT}
+
+
+def test_page_offers_every_action_with_known_names() -> None:
+    """A typo in a button's action would make it silently do nothing."""
+    page = resources.files("easytv").joinpath("web.html").read_text()
+    buttons = set(re.findall(r'data-action="(\w+)"', page))
+    # The power button toggles between stop and play; the channel list sends goto.
+    power = re.search(r'power\.dataset\.action = status\.stopped \? "(\w+)" : "(\w+)"', page)
+    goto = re.search(r'send\(\{ action: "(\w+)", number \}\)', page)
+    assert power is not None and goto is not None
+    offered = buttons | set(power.groups()) | {goto[1]}
+    assert offered == {action.value for action in WEB_ACTIONS}
 
 
 def test_page(web: WebRemote) -> None:
