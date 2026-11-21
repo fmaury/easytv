@@ -69,6 +69,6 @@ paths:
   `--ao=alsa` + périphérique HDMI : le service tourne hors session, sans PipeWire), `save_interval = 30`.
 - Relancer EasyTV sans sudo : `python -m easytv.ctl cmd script-message easytv quit` → systemd le
   relance (le code est installé en mode éditable : un `git pull` suffit pour le code Python).
-- Capture de l'écran de la TV : `python -m easytv.ctl cmd screenshot-to-file <fichier>` (écrit en
+- Capture de l'écran de la TV : `python -m easytv.ctl cmd screenshot-to-file <fichier> window` (`window` : avec le bandeau ; écrit en
   différé : attendre ~2 s).
 - `README.md` : guide utilisateur en français (carte SD → SSH → `install.sh` → vidéos par SFTP).

@@ -90,6 +90,9 @@ appuie sur chaque bouton de la télécommande par l'API, effet vérifié sur mpv
 (génération des clips de test) sont obligatoires pour les tests.
 Essai réel piloté par Claude : config avec `input = "remote"` (et `--vo=null` sans écran), puis
 `easytv.ctl`.
+**Page (`web.html`, `web.py`) ou bandeau (`banner.py`) modifié → lancer l'agent `remote-tester`**
+(vrai navigateur en taille téléphone, chaque bouton vérifié sur mpv, la page et l'écran de la TV ;
+lanceur local : `.claude/scripts/remote-test.sh`).
 
 **Une tâche n'est finie que si** `ruff format --check`, `ruff check`, `mypy` et `pytest` passent.
 Le pre-commit (`.githooks/pre-commit`) les relance à chaque commit et refuse le commit en cas d'échec.

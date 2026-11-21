@@ -35,7 +35,7 @@ ssh HOST 'CTL get path time-pos duration hwdec-current frame-drop-count decoder-
 ## 3. Écran de la TV
 
 ```bash
-ssh HOST 'CTL cmd screenshot-to-file /tmp/easytv-shot.png && sleep 2 && ls -l /tmp/easytv-shot.png'
+ssh HOST 'CTL cmd screenshot-to-file /tmp/easytv-shot.png window && sleep 2 && ls -l /tmp/easytv-shot.png'
 scp HOST:/tmp/easytv-shot.png <scratchpad>/easytv-shot.png
 ```
 

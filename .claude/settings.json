@@ -8,7 +8,9 @@
       "Bash(uv run mypy:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(.claude/scripts/remote-test.sh:*)",
+      "Bash(uv run python -m easytv.ctl:*)"
     ],
     "ask": [
       "Bash(ssh:*)",
