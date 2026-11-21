@@ -28,11 +28,8 @@ paths:
 
 ## Contraintes matérielles
 
-- Un seul port HDMI (taille normale), qui gère le CEC.
-- TV **TCL 50P610** : CEC = « T-Link ». **Aucune touche transmise** à la Pi (voir `ROADMAP.md`) ;
-  CH+ change d'entrée HDMI. Elle affiche « HDMI1 », jamais le nom OSD.
-  → zapping par la page web.
-  Vérifier les touches reçues : `cec-ctl -d /dev/cec0 --playback -M`.
+- Un seul port HDMI (taille normale).
+- TV **TCL 50P610** : on zappe par la page web (télécommande servie par EasyTV).
 - Décodage matériel Pi 3 : **H.264 uniquement** (jusqu'à 1080p). Pas de HEVC matériel :
   HEVC, VP9, AV1 saccadent. Pas de conversion automatique dans l'app : vidéos fournies en H.264.
 - **mpv sur la Pi : `--hwdec=v4l2m2m-copy`** (décodeur `bcm2835-codec`, image recopiée), `--vo=gpu`

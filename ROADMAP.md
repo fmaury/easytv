@@ -18,9 +18,6 @@
 
 ## Écarté
 
-- **CEC** : la TCL 50P610 ne transmet aucune touche (testé le 2026-11-14 : Pi seule sur le bus,
-  CEC 1.4, identifiant fabricant TCL, type tuner → rien ; la TV demande seulement le nom OSD).
-  Elle sait en revanche basculer sur l'entrée de la Pi (`active-source`).
 - **Télécommande physique** (infrarouge GPIO ou USB via `evdev`) : écartée le 2026-11-14, la page
   web suffit (marche chez tout le monde, rien à acheter, plusieurs téléphones à la fois).
 - **Conversion automatique des vidéos** : les vidéos sont fournies en H.264 (voir le README).

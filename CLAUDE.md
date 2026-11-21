@@ -140,5 +140,4 @@ Le pre-commit (`.githooks/pre-commit`) les relance à chaque commit et refuse le
 
 `ROADMAP.md`, à mettre à jour à chaque étape terminée.
 Config Claude (règles, hooks, skills, agents) : `ROADMAP-CLAUDE.md`, une étape à la fois.
-Écarté, à ne pas reproposer : CEC (la TCL ne transmet aucune touche), télécommande physique,
-conversion automatique des vidéos.
+Écarté, à ne pas reproposer : télécommande physique, conversion automatique des vidéos.
